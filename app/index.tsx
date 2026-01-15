@@ -3,20 +3,20 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 export default function App() {
   return (
     <View style={styles.container}>
-      {/* App Title */}
+      
       <Text style={styles.title}>CookBook 🍽️</Text>
 
-      {/* Subtitle */}
+      
       <Text style={styles.subtitle}>
         Organize, explore, and manage your favorite recipes with style!
       </Text>
 
-      {/* Get Started Button */}
+      
       <Pressable style={styles.button}>
         <Text style={styles.buttonText}>Get Started</Text>
       </Pressable>
 
-      {/* Footer Note */}
+      
       <Text style={styles.footer}>NativeWind is working perfectly! 🌟</Text>
     </View>
   );
