@@ -398,16 +398,25 @@ export default function Recipes() {
   };
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <View style={styles.loadingCard}>
-          <MaterialIcons name="restaurant-menu" size={40} color="#F97316" />
-          <ActivityIndicator size="large" color="#F97316" style={{ marginTop: 15 }} />
-          <Text style={styles.loadingText}>Loading recipes...</Text>
-        </View>
+  return (
+    <View style={styles.loadingContainer}>
+      {/* Animated Dots */}
+      <View style={styles.dotsRow}>
+        <View style={[styles.dot, styles.dotOrange]} />
+        <View style={[styles.dot, styles.dotGreen]} />
+        <View style={[styles.dot, styles.dotYellow]} />
+        <View style={[styles.dot, styles.dotPurple]} />
       </View>
-    );
-  }
+      
+      {/* Text Content */}
+      <Text style={styles.loadingTitle}>CookBook</Text>
+      <Text style={styles.loadingText}>Loading delicious recipes...</Text>
+      
+      {/* Subtle Activity Indicator */}
+      <ActivityIndicator size="large" color="#F97316" style={{ marginTop: 20 }} />
+    </View>
+  );
+}
 
   const favoriteCount = Object.values(favorites).filter(fav => fav).length;
 
@@ -666,6 +675,8 @@ export default function Recipes() {
   );
 }
 
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -677,22 +688,54 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
+    paddingHorizontal: 20,
   },
-  loadingCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 40,
+  dotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 30,
+    gap: 12,
+  },
+  dot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  dotOrange: {
+    backgroundColor: '#F97316',
+  },
+  dotGreen: {
+    backgroundColor: '#10B981',
+  },
+  dotYellow: {
+    backgroundColor: '#FBBF24',
+  },
+  dotPurple: {
+    backgroundColor: '#8B5CF6',
+  },
+  loadingTitle: {
+    fontSize: 40,
+    fontWeight: '900',
+    color: '#1f2937',
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.1)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   loadingText: {
-    marginTop: 15,
     fontSize: 16,
     color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontWeight: '500',
   },
   header: {
     paddingHorizontal: 20,

@@ -3,9 +3,12 @@ import { View, Text, Pressable, StyleSheet } from 'react-native'
 import { router } from 'expo-router'
 import { getCurrentUser, logoutUser } from '../services/authService'
 import { MaterialIcons } from '@expo/vector-icons'
+import RecipePreloader from './components/RecipePreloader'
 
 export default function App() {
   const [user, setUser] = useState(getCurrentUser())
+  const [showPreloader, setShowPreloader] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
     setUser(getCurrentUser())
@@ -15,6 +18,26 @@ export default function App() {
     await logoutUser()
     setUser(null)
     router.replace('/')
+  }
+
+  // Navigation with preloader
+  const navigateWithPreloader = (path: any) => {
+    if (isNavigating) return
+    
+    setIsNavigating(true)
+    setShowPreloader(true)
+    
+    // Wait for preloader animation (3 seconds) then navigate
+    setTimeout(() => {
+      router.push(path)
+      setShowPreloader(false)
+      setIsNavigating(false)
+    }, 3000)
+  }
+
+  // If preloader is showing, only show the preloader
+  if (showPreloader) {
+    return <RecipePreloader />
   }
 
   return (
@@ -56,7 +79,8 @@ export default function App() {
             {/* Browse Recipes Button */}
             <Pressable
               style={[styles.actionButton, styles.primaryButton]}
-              onPress={() => router.push('/recipes')}
+              onPress={() => navigateWithPreloader('/recipes')}
+              disabled={isNavigating}
             >
               <View style={styles.buttonContent}>
                 <MaterialIcons name="menu-book" size={24} color="white" />
@@ -68,7 +92,8 @@ export default function App() {
             {/* Add Recipe Button */}
             <Pressable
               style={[styles.actionButton, styles.successButton]}
-              onPress={() => router.push('/recipes/add')}
+              onPress={() => navigateWithPreloader('/recipes/add')}
+              disabled={isNavigating}
             >
               <View style={styles.buttonContent}>
                 <MaterialIcons name="add-circle-outline" size={24} color="white" />
@@ -81,6 +106,7 @@ export default function App() {
             <Pressable
               style={[styles.actionButton, styles.dangerButton]}
               onPress={handleLogout}
+              disabled={isNavigating}
             >
               <View style={styles.buttonContent}>
                 <MaterialIcons name="exit-to-app" size={24} color="white" />
@@ -94,6 +120,7 @@ export default function App() {
           <Pressable
             style={[styles.actionButton, styles.primaryButton]}
             onPress={() => router.push('/login')}
+            disabled={isNavigating}
           >
             <View style={styles.buttonContent}>
               <MaterialIcons name="restaurant-menu" size={24} color="white" />
