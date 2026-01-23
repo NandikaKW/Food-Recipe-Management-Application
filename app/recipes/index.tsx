@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'; 
 import {
   View,
   Text,
@@ -8,10 +8,17 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
-import { getAllRecipes, deleteRecipe } from '../../services/recipeService';
-import { getCurrentUser } from '../../services/authService';
+import { 
+  getAllRecipes, 
+  deleteRecipe, 
+  toggleFavorite, 
+  isRecipeInFavorites 
+} from '../../services/recipeService';
+import { getCurrentUser, getUserData } from '../../services/authService';
 import { MaterialIcons } from '@expo/vector-icons';
 
 interface RecipeItem {
@@ -27,17 +34,55 @@ interface RecipeItem {
 
 export default function Recipes() {
   const [recipes, setRecipes] = useState<RecipeItem[]>([]);
+  const [filteredRecipes, setFilteredRecipes] = useState<RecipeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const currentUser = getCurrentUser();
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+  
+  // Search & Filter States
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [selectedTime, setSelectedTime] = useState<string>('All');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  
+  // Time ranges for filtering
+  const timeRanges = [
+    { label: 'All', min: 0, max: 9999 },
+    { label: 'Quick (<15 min)', min: 0, max: 15 },
+    { label: 'Medium (15-30 min)', min: 15, max: 30 },
+    { label: 'Long (>30 min)', min: 30, max: 9999 },
+  ];
+
+  // Difficulty options
+  const difficultyOptions = ['All', 'Easy', 'Medium', 'Hard'];
 
   useEffect(() => {
     loadRecipes();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [recipes, searchKeyword, selectedTime, selectedDifficulty, showFavorites, favorites]);
+
   const loadRecipes = async () => {
     try {
       setLoading(true);
       const allRecipes = await getAllRecipes();
+
+      const usersMap: Record<string, string> = {};
+
+      // Fetch user names for createdBy field
+      for (const recipe of allRecipes) {
+        if (!usersMap[recipe.createdBy]) {
+          const userData = await getUserData(recipe.createdBy);
+          usersMap[recipe.createdBy] = userData?.name || 'Unknown User';
+        }
+      }
+
+      setUserNames(usersMap);
+
       const transformedRecipes: RecipeItem[] = allRecipes.map(recipe => ({
         id: recipe.id || '',
         title: recipe.title,
@@ -46,15 +91,136 @@ export default function Recipes() {
         difficulty: recipe.difficulty,
         cookingTime: recipe.cookingTime,
         imageUrl: recipe.imageUrl,
-        createdBy: recipe.createdBy
+        createdBy: recipe.createdBy,
       }));
+
       setRecipes(transformedRecipes);
+      setFilteredRecipes(transformedRecipes);
+
+      // Load favorites for current user
+      if (currentUser) {
+        loadUserFavorites(currentUser.uid, transformedRecipes.map(r => r.id));
+      }
     } catch (error: any) {
       Alert.alert('Error', 'Failed to load recipes');
       console.error(error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadUserFavorites = async (userId: string, recipeIds: string[]) => {
+    try {
+      const newFavorites: Record<string, boolean> = {};
+      
+      for (const recipeId of recipeIds) {
+        const isFavorite = await isRecipeInFavorites(userId, recipeId);
+        newFavorites[recipeId] = isFavorite;
+      }
+      
+      setFavorites(newFavorites);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    }
+  };
+
+  // 🟡 SEARCH FUNCTION: searchRecipes(keyword)
+  const searchRecipes = (keyword: string) => {
+    if (!keyword.trim()) {
+      return recipes;
+    }
+
+    return recipes.filter(recipe => 
+      recipe.title.toLowerCase().includes(keyword.toLowerCase()) ||
+      recipe.description.toLowerCase().includes(keyword.toLowerCase()) ||
+      recipe.category.toLowerCase().includes(keyword.toLowerCase())
+    );
+  };
+
+  // 🟡 FILTER FUNCTION: filterRecipesByTime(time)
+  const filterRecipesByTime = (timeRange: string) => {
+    setSelectedTime(timeRange);
+    setShowFilterModal(false);
+  };
+
+  // 🟡 FILTER FUNCTION: filterRecipesByDifficulty(level)
+  const filterRecipesByDifficulty = (level: string) => {
+    setSelectedDifficulty(level);
+    setShowFilterModal(false);
+  };
+
+  // Apply all active filters
+  const applyFilters = () => {
+    let result = [...recipes];
+
+    // Apply search filter
+    if (searchKeyword.trim()) {
+      result = searchRecipes(searchKeyword);
+    }
+
+    // Apply time filter
+    if (selectedTime !== 'All') {
+      const timeRange = timeRanges.find(tr => tr.label === selectedTime);
+      if (timeRange) {
+        result = result.filter(recipe => 
+          recipe.cookingTime >= timeRange.min && recipe.cookingTime <= timeRange.max
+        );
+      }
+    }
+
+    // Apply difficulty filter
+    if (selectedDifficulty !== 'All') {
+      result = result.filter(recipe => recipe.difficulty === selectedDifficulty);
+    }
+
+    // Apply favorites filter
+    if (showFavorites) {
+      result = result.filter(recipe => favorites[recipe.id]);
+    }
+
+    setFilteredRecipes(result);
+  };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setSearchKeyword('');
+    setSelectedTime('All');
+    setSelectedDifficulty('All');
+    setShowFavorites(false);
+    setFilteredRecipes(recipes);
+    setShowFilterModal(false);
+  };
+
+  // 🟡 FAVORITE FUNCTION: toggleFavorite(recipeId)
+  const handleToggleFavorite = async (recipeId: string) => {
+    if (!currentUser) {
+      Alert.alert('Login Required', 'Please login to save favorites');
+      router.push('/login');
+      return;
+    }
+
+    try {
+      const isFavorite = favorites[recipeId] || false;
+      await toggleFavorite(currentUser.uid, recipeId, isFavorite);
+      
+      // Update local state
+      setFavorites(prev => ({
+        ...prev,
+        [recipeId]: !isFavorite
+      }));
+      
+      // Show success message
+      if (!isFavorite) {
+        Alert.alert('Success', 'Added to favorites!');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to update favorites');
+      console.error(error);
+    }
+  };
+
+  const handleSearchChange = (text: string) => {
+    setSearchKeyword(text);
   };
 
   const handleDelete = (recipeId: string, recipeTitle: string) => {
@@ -69,7 +235,9 @@ export default function Recipes() {
           onPress: async () => {
             try {
               await deleteRecipe(recipeId);
-              setRecipes(recipes.filter(recipe => recipe.id !== recipeId));
+              const updatedRecipes = recipes.filter(recipe => recipe.id !== recipeId);
+              setRecipes(updatedRecipes);
+              setFilteredRecipes(updatedRecipes);
               Alert.alert('Success', 'Recipe deleted successfully');
             } catch (error: any) {
               Alert.alert('Error', 'Failed to delete recipe');
@@ -110,89 +278,124 @@ export default function Recipes() {
     }
   };
 
- const renderRecipeItem = ({ item }: { item: RecipeItem }) => {
-  const isOwner = currentUser?.uid === item.createdBy;
+  const renderRecipeItem = ({ item }: { item: RecipeItem }) => {
+    const isOwner = currentUser?.uid === item.createdBy;
+    const displayName = item.createdBy === currentUser?.uid 
+      ? 'You' 
+      : userNames[item.createdBy] || 'User';
+    const isFavorite = favorites[item.id] || false;
 
-  return (
-    <Pressable 
-      style={styles.recipeCard} 
-      onPress={() => handleView(item.id)}
-    >
-      {/* Recipe Image */}
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.recipeImage} />
-      ) : (
-        <View style={[styles.recipeImage, styles.noImage]}>
-          <MaterialIcons name="local-dining" size={40} color="#9CA3AF" />
-        </View>
-      )}
+    return (
+      <Pressable
+        style={styles.recipeCard}
+        onPress={() => handleView(item.id)}
+      >
+        {/* Favorite Button */}
+        <Pressable
+          style={styles.favoriteButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            handleToggleFavorite(item.id);
+          }}
+        >
+          <MaterialIcons 
+            name={isFavorite ? "favorite" : "favorite-border"} 
+            size={24} 
+            color={isFavorite ? "#EF4444" : "white"} 
+          />
+        </Pressable>
 
-      <View style={styles.recipeContent}>
-        <View style={styles.recipeHeader}>
-          <View style={styles.recipeInfo}>
-            <Text style={styles.recipeTitle}>{item.title}</Text>
-            
-            <View style={styles.metaContainer}>
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.recipeImage} />
+        ) : (
+          <View style={[styles.recipeImage, styles.noImage]}>
+            <MaterialIcons name="local-dining" size={40} color="#9CA3AF" />
+          </View>
+        )}
+
+        <View style={styles.recipeContent}>
+          <View style={styles.recipeHeader}>
+            <View style={styles.titleSection}>
+              <Text style={styles.recipeTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              
+              <View style={styles.creatorBadge}>
+                <MaterialIcons name="person-outline" size={14} color="#6B7280" />
+                <Text style={styles.creatorText}>
+                  {displayName}
+                </Text>
+              </View>
+            </View>
+
+            {isOwner && (
+              <View style={styles.actionButtons}>
+                <Pressable
+                  style={styles.iconButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleEdit(item.id);
+                  }}
+                >
+                  <MaterialIcons name="edit-note" size={20} color="#3B82F6" />
+                </Pressable>
+
+                <Pressable
+                  style={styles.iconButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDelete(item.id, item.title);
+                  }}
+                >
+                  <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.metaContainer}>
+            <View style={styles.metaRow}>
               <View style={styles.metaItem}>
-                {/* Updated Category Icon - Changed from 'category' to 'restaurant-menu' */}
                 <MaterialIcons name="restaurant-menu" size={16} color="#6B7280" />
                 <Text style={styles.metaText}>{item.category}</Text>
               </View>
-              
+
               <View style={styles.metaItem}>
                 <MaterialIcons name="access-time" size={16} color="#6B7280" />
                 <Text style={styles.metaText}>{item.cookingTime} min</Text>
               </View>
-              
+
               <View style={styles.metaItem}>
-                <MaterialIcons 
-                  name={getDifficultyIcon(item.difficulty)} 
-                  size={16} 
-                  color={getDifficultyColor(item.difficulty)} 
+                <MaterialIcons
+                  name={getDifficultyIcon(item.difficulty)}
+                  size={16}
+                  color={getDifficultyColor(item.difficulty)}
                 />
                 <Text style={[styles.metaText, { color: getDifficultyColor(item.difficulty) }]}>
                   {item.difficulty}
                 </Text>
               </View>
             </View>
-            
-            <Text style={styles.recipeDescription} numberOfLines={2}>
-              {item.description}
-            </Text>
           </View>
 
-          {/* Action Buttons - Only show if owner */}
-          {isOwner && (
-            <View style={styles.actionButtons}>
-              <Pressable
-                style={styles.iconButton}
-                onPress={() => handleEdit(item.id)}
-              >
-                <MaterialIcons name="edit-note" size={20} color="#3B82F6" />
-              </Pressable>
-              
-              <Pressable
-                style={styles.iconButton}
-                onPress={() => handleDelete(item.id, item.title)}
-              >
-                <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
-              </Pressable>
-            </View>
-          )}
+          <Text style={styles.recipeDescription} numberOfLines={2}>
+            {item.description}
+          </Text>
+
+          <Pressable
+            style={styles.viewButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleView(item.id);
+            }}
+          >
+            <Text style={styles.viewButtonText}>View Recipe</Text>
+            <MaterialIcons name="chevron-right" size={20} color="#F97316" />
+          </Pressable>
         </View>
-        
-        {/* View Button */}
-        <Pressable 
-          style={styles.viewButton}
-          onPress={() => handleView(item.id)}
-        >
-          <Text style={styles.viewButtonText}>View Recipe</Text>
-          <MaterialIcons name="chevron-right" size={20} color="#F97316" />
-        </Pressable>
-      </View>
-    </Pressable>
-  );
-};
+      </Pressable>
+    );
+  };
 
   if (loading) {
     return (
@@ -206,6 +409,8 @@ export default function Recipes() {
     );
   }
 
+  const favoriteCount = Object.values(favorites).filter(fav => fav).length;
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -214,7 +419,7 @@ export default function Recipes() {
           <MaterialIcons name="home" size={24} color="#F97316" />
           <Text style={styles.backButtonText}>Back to Home</Text>
         </Pressable>
-        
+
         <View style={styles.headerContent}>
           <View style={styles.headerIcon}>
             <MaterialIcons name="menu-book" size={28} color="white" />
@@ -224,37 +429,115 @@ export default function Recipes() {
         </View>
       </View>
 
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <MaterialIcons name="search" size={20} color="#9CA3AF" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search recipes..."
+            value={searchKeyword}
+            onChangeText={handleSearchChange}
+            placeholderTextColor="#9CA3AF"
+          />
+          {searchKeyword ? (
+            <Pressable onPress={() => setSearchKeyword('')}>
+              <MaterialIcons name="close" size={20} color="#9CA3AF" />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {/* Filter Button */}
+        <Pressable 
+          style={styles.filterButton}
+          onPress={() => setShowFilterModal(true)}
+        >
+          <MaterialIcons name="filter-list" size={22} color="white" />
+          <Text style={styles.filterButtonText}>Filter</Text>
+        </Pressable>
+
+        {/* Favorites Button */}
+        <Pressable 
+          style={[styles.favoritesButton, showFavorites && styles.favoritesButtonActive]}
+          onPress={() => {
+            if (!currentUser) {
+              Alert.alert('Login Required', 'Please login to view favorites');
+              router.push('/login');
+              return;
+            }
+            setShowFavorites(!showFavorites);
+          }}
+        >
+          <MaterialIcons 
+            name="favorite" 
+            size={22} 
+            color={showFavorites ? "#EF4444" : "white"} 
+          />
+        </Pressable>
+      </View>
+
+      {/* Active Filters Display */}
+      {(selectedTime !== 'All' || selectedDifficulty !== 'All' || showFavorites) && (
+        <View style={styles.activeFiltersContainer}>
+          <Text style={styles.activeFiltersText}>Active Filters:</Text>
+          <View style={styles.activeFiltersRow}>
+            {showFavorites && (
+              <View style={styles.activeFilterBadge}>
+                <Text style={styles.activeFilterText}>Favorites Only</Text>
+                <Pressable onPress={() => setShowFavorites(false)}>
+                  <MaterialIcons name="close" size={14} color="#6B7280" />
+                </Pressable>
+              </View>
+            )}
+            {selectedTime !== 'All' && (
+              <View style={styles.activeFilterBadge}>
+                <Text style={styles.activeFilterText}>Time: {selectedTime}</Text>
+                <Pressable onPress={() => setSelectedTime('All')}>
+                  <MaterialIcons name="close" size={14} color="#6B7280" />
+                </Pressable>
+              </View>
+            )}
+            {selectedDifficulty !== 'All' && (
+              <View style={styles.activeFilterBadge}>
+                <Text style={styles.activeFilterText}>Difficulty: {selectedDifficulty}</Text>
+                <Pressable onPress={() => setSelectedDifficulty('All')}>
+                  <MaterialIcons name="close" size={14} color="#6B7280" />
+                </Pressable>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
+
       {/* Stats Bar */}
       <View style={styles.statsBar}>
         <View style={styles.statItem}>
           <MaterialIcons name="local-dining" size={22} color="#F97316" />
-          <Text style={styles.statNumber}>{recipes.length}</Text>
+          <Text style={styles.statNumber}>{filteredRecipes.length}</Text>
           <Text style={styles.statLabel}>Recipes</Text>
         </View>
-        
+
         <View style={styles.statDivider} />
-        
+
         <View style={styles.statItem}>
-          <MaterialIcons name="timer" size={22} color="#10B981" />
-          <Text style={styles.statNumber}>
-            {recipes.reduce((sum, recipe) => sum + recipe.cookingTime, 0)}
-          </Text>
-          <Text style={styles.statLabel}>Total Min</Text>
+          <MaterialIcons name="favorite" size={22} color="#EF4444" />
+          <Text style={styles.statNumber}>{favoriteCount}</Text>
+          <Text style={styles.statLabel}>Favorites</Text>
         </View>
-        
+
         <View style={styles.statDivider} />
-        
+
         <View style={styles.statItem}>
           <MaterialIcons name="emoji-events" size={22} color="#3B82F6" />
           <Text style={styles.statNumber}>
-            {recipes.filter(r => r.difficulty === 'Easy').length}
+            {filteredRecipes.filter(r => r.difficulty === 'Easy').length}
           </Text>
           <Text style={styles.statLabel}>Easy</Text>
         </View>
       </View>
 
       {/* Add Recipe Button */}
-      <Pressable 
+      <Pressable
         style={styles.addButton}
         onPress={() => router.push('/recipes/add')}
       >
@@ -264,33 +547,121 @@ export default function Recipes() {
         </View>
       </Pressable>
 
-      {/* Recipes List */}
-      {recipes.length === 0 ? (
+      {/* Recipe List */}
+      {filteredRecipes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <View style={styles.emptyCard}>
             <MaterialIcons name="kitchen" size={48} color="#9CA3AF" />
-            <Text style={styles.emptyTitle}>No Recipes Yet</Text>
-            <Text style={styles.emptyText}>
-              Your recipe collection is empty. Start cooking!
+            <Text style={styles.emptyTitle}>
+              {showFavorites ? 'No Favorite Recipes' : 'No Recipes Found'}
             </Text>
-            <Pressable 
-              style={styles.emptyButton}
-              onPress={() => router.push('/recipes/add')}
-            >
-              <MaterialIcons name="add" size={20} color="white" />
-              <Text style={styles.emptyButtonText}>Add First Recipe</Text>
-            </Pressable>
+            <Text style={styles.emptyText}>
+              {showFavorites 
+                ? 'Add recipes to your favorites to see them here!' 
+                : searchKeyword || selectedTime !== 'All' || selectedDifficulty !== 'All'
+                  ? 'Try adjusting your search or filters'
+                  : 'Your recipe collection is empty. Start cooking!'}
+            </Text>
+            {(searchKeyword || selectedTime !== 'All' || selectedDifficulty !== 'All' || showFavorites) && (
+              <Pressable
+                style={styles.emptyButton}
+                onPress={resetFilters}
+              >
+                <MaterialIcons name="refresh" size={20} color="white" />
+                <Text style={styles.emptyButtonText}>Clear Filters</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       ) : (
         <FlatList
-          data={recipes}
+          data={filteredRecipes}
           renderItem={renderRecipeItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Filter Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Recipes</Text>
+              <Pressable onPress={() => setShowFilterModal(false)}>
+                <MaterialIcons name="close" size={24} color="#6B7280" />
+              </Pressable>
+            </View>
+
+            {/* Time Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Cooking Time</Text>
+              <View style={styles.filterOptions}>
+                {timeRanges.map(timeRange => (
+                  <Pressable
+                    key={timeRange.label}
+                    style={[
+                      styles.filterOption,
+                      selectedTime === timeRange.label && styles.filterOptionActive
+                    ]}
+                    onPress={() => filterRecipesByTime(timeRange.label)}
+                  >
+                    <Text style={[
+                      styles.filterOptionText,
+                      selectedTime === timeRange.label && styles.filterOptionTextActive
+                    ]}>
+                      {timeRange.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Difficulty Filter */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>Difficulty</Text>
+              <View style={styles.filterOptions}>
+                {difficultyOptions.map(level => (
+                  <Pressable
+                    key={level}
+                    style={[
+                      styles.filterOption,
+                      selectedDifficulty === level && styles.filterOptionActive
+                    ]}
+                    onPress={() => filterRecipesByDifficulty(level)}
+                  >
+                    <Text style={[
+                      styles.filterOptionText,
+                      selectedDifficulty === level && styles.filterOptionTextActive
+                    ]}>
+                      {level}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <Pressable style={styles.resetButton} onPress={resetFilters}>
+                <Text style={styles.resetButtonText}>Reset All</Text>
+              </Pressable>
+              <Pressable 
+                style={styles.applyButton} 
+                onPress={() => setShowFilterModal(false)}
+              >
+                <Text style={styles.applyButtonText}>Apply Filters</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -366,6 +737,80 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
   },
+  searchContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+    gap: 10,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  searchInput: {
+    flex: 1,
+    padding: 12,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F97316',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+  },
+  filterButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  favoritesButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F97316',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  favoritesButtonActive: {
+    backgroundColor: '#FEE2E2',
+  },
+  activeFiltersContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 15,
+  },
+  activeFiltersText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  activeFiltersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  activeFilterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E5E7EB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  activeFilterText: {
+    fontSize: 12,
+    color: '#4B5563',
+  },
   statsBar: {
     flexDirection: 'row',
     backgroundColor: 'white',
@@ -438,10 +883,23 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'relative',
+  },
+  favoriteButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recipeImage: {
     width: '100%',
-    height: 160,
+    height: 180,
   },
   noImage: {
     backgroundColor: '#F3F4F6',
@@ -455,36 +913,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  recipeInfo: {
+  titleSection: {
     flex: 1,
-    marginRight: 10,
+    marginRight: 12,
   },
   recipeTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1f2937',
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  creatorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  creatorText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+    fontWeight: '500',
   },
   metaContainer: {
+    marginBottom: 12,
+  },
+  metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 10,
     gap: 12,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
   },
   metaText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
-    marginLeft: 4,
+    marginLeft: 6,
+    fontWeight: '500',
   },
   recipeDescription: {
     color: '#6B7280',
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 16,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -502,14 +984,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     backgroundColor: '#FFEDD5',
-    borderRadius: 10,
+    borderRadius: 12,
   },
   viewButtonText: {
     color: '#F97316',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     marginRight: 8,
   },
@@ -556,6 +1037,95 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  filterSection: {
+    marginBottom: 24,
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  filterOption: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  filterOptionActive: {
+    backgroundColor: '#FFEDD5',
+    borderColor: '#F97316',
+  },
+  filterOptionText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  filterOptionTextActive: {
+    color: '#F97316',
+    fontWeight: '600',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  resetButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  resetButtonText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  applyButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#F97316',
+  },
+  applyButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',

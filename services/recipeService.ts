@@ -8,7 +8,8 @@ import {
   deleteDoc, 
   query, 
   where, 
-  Timestamp 
+  Timestamp ,
+  setDoc
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { getCurrentUser } from './authService';
@@ -30,7 +31,7 @@ export interface Recipe {
 const CLOUD_NAME = "dvqm3oewy"; 
 const UPLOAD_PRESET = "expoapp"; 
 
-// 🔹 5️⃣ CREATE: Add new recipe
+//  Add new recipe
 export const addRecipe = async (recipeData: Omit<Recipe, 'id' | 'createdAt'>, imageUri?: string): Promise<string> => {
   try {
     let imageUrl = '';
@@ -58,7 +59,7 @@ export const addRecipe = async (recipeData: Omit<Recipe, 'id' | 'createdAt'>, im
   }
 };
 
-// 🔹 6️⃣ READ: Get all recipes
+//  Get all recipes
 export const getAllRecipes = async (): Promise<Recipe[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, 'recipes'));
@@ -88,7 +89,7 @@ export const getAllRecipes = async (): Promise<Recipe[]> => {
   }
 };
 
-// 🔹 7️⃣ READ: Get recipe by ID
+//  Get recipe by ID
 export const getRecipeById = async (recipeId: string): Promise<Recipe | null> => {
   try {
     const docRef = doc(db, 'recipes', recipeId);
@@ -117,7 +118,7 @@ export const getRecipeById = async (recipeId: string): Promise<Recipe | null> =>
   }
 };
 
-// 🔹 8️⃣ READ: Get user's recipes
+// Get user's recipes
 export const getUserRecipes = async (userId: string): Promise<Recipe[]> => {
   try {
     const q = query(collection(db, 'recipes'), where('createdBy', '==', userId));
@@ -148,7 +149,7 @@ export const getUserRecipes = async (userId: string): Promise<Recipe[]> => {
   }
 };
 
-// 🔹 9️⃣ UPDATE: Update recipe
+// Update recipe
 export const updateRecipe = async (
   recipeId: string, 
   updatedData: Partial<Recipe>, 
@@ -175,7 +176,7 @@ export const updateRecipe = async (
   }
 };
 
-// 🔹 🔟 DELETE: Delete recipe
+//  DELETE: Delete recipe
 export const deleteRecipe = async (recipeId: string): Promise<void> => {
   try {
     // Note: Cloudinary images are not deleted automatically
@@ -188,7 +189,7 @@ export const deleteRecipe = async (recipeId: string): Promise<void> => {
   }
 };
 
-// 🔹 Helper: Upload image to Cloudinary
+// Helper: Upload image to Cloudinary
 export const uploadImageToCloudinary = async (imageUri: string): Promise<string> => {
   try {
     const formData = new FormData();
@@ -217,5 +218,72 @@ export const uploadImageToCloudinary = async (imageUri: string): Promise<string>
   } catch (error) {
     console.error('Error uploading image:', error);
     throw error;
+  }
+};
+
+// 🟡 FAVORITES FUNCTIONS
+// Add recipe to favorites
+export const addToFavorites = async (userId: string, recipeId: string): Promise<void> => {
+  try {
+    const favoriteRef = doc(db, 'users', userId, 'favorites', recipeId);
+    await setDoc(favoriteRef, {
+      recipeId,
+      addedAt: Timestamp.now()
+    });
+  } catch (error) {
+    console.error('Error adding to favorites:', error);
+    throw error;
+  }
+};
+
+// Remove recipe from favorites
+export const removeFromFavorites = async (userId: string, recipeId: string): Promise<void> => {
+  try {
+    const favoriteRef = doc(db, 'users', userId, 'favorites', recipeId);
+    await deleteDoc(favoriteRef);
+  } catch (error) {
+    console.error('Error removing from favorites:', error);
+    throw error;
+  }
+};
+
+// Toggle favorite status
+export const toggleFavorite = async (userId: string, recipeId: string, isFavorite: boolean): Promise<void> => {
+  if (isFavorite) {
+    await removeFromFavorites(userId, recipeId);
+  } else {
+    await addToFavorites(userId, recipeId);
+  }
+};
+
+// Get user's favorite recipe IDs
+export const getFavoriteRecipes = async (userId: string): Promise<string[]> => {
+  try {
+    const favoritesRef = collection(db, 'users', userId, 'favorites');
+    const querySnapshot = await getDocs(favoritesRef);
+    
+    const favoriteIds: string[] = [];
+    querySnapshot.forEach((doc) => {
+      favoriteIds.push(doc.id);
+    });
+    
+    return favoriteIds;
+  } catch (error) {
+    console.error('Error getting favorite recipes:', error);
+    return [];
+  }
+};
+
+// Check if recipe is in favorites
+export const isRecipeInFavorites = async (userId: string, recipeId: string): Promise<boolean> => {
+  try {
+    if (!userId || !recipeId) return false;
+    
+    const favoriteRef = doc(db, 'users', userId, 'favorites', recipeId);
+    const docSnap = await getDoc(favoriteRef);
+    return docSnap.exists();
+  } catch (error) {
+    console.error('Error checking favorite:', error);
+    return false;
   }
 };

@@ -12,7 +12,7 @@ export default function RootLayout() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 2000); // Match the preloader duration
+    }, 2000); 
     return () => clearTimeout(timer);
   }, []);
 
