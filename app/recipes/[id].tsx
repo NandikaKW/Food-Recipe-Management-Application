@@ -10,9 +10,22 @@ import {
   Pressable,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getRecipeById, deleteRecipe, toggleFavorite, isRecipeInFavorites } from '../../services/recipeService';
+import { 
+  getRecipeById, 
+  deleteRecipe, 
+  toggleFavorite, 
+  isRecipeInFavorites,
+  addRecipeReview, 
+  getRecipeReviews, 
+  calculateAverageRating,
+  getUserReview,
+  updateRecipeReview,
+  deleteRecipeReview,
+  type Review 
+} from '../../services/recipeService';
 import { getCurrentUser, getUserData } from '../../services/authService';
 import { MaterialIcons } from '@expo/vector-icons';
+import ReviewModal from './../components/ReviewModal';
 
 export default function RecipeDetail() {
   const { id } = useLocalSearchParams();
@@ -23,6 +36,13 @@ export default function RecipeDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const currentUser = getCurrentUser();
   const [creatorName, setCreatorName] = useState<string>('User');
+
+  // 🟠 REVIEW STATES
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [averageRating, setAverageRating] = useState({ average: 0, total: 0, count: 0 });
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [userReview, setUserReview] = useState<Review | null>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   
   // 🟣 SIMPLE COOKING TIMER STATE
   const [cookingTimer, setCookingTimer] = useState({
@@ -37,6 +57,15 @@ export default function RecipeDetail() {
       loadRecipe(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (recipe) {
+      loadReviews();
+      if (currentUser) {
+        checkUserReview();
+      }
+    }
+  }, [recipe, currentUser]);
 
   useEffect(() => {
     if (currentUser && recipe) {
@@ -73,6 +102,87 @@ export default function RecipeDetail() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 🟠 REVIEW FUNCTIONS
+  const loadReviews = async () => {
+    if (!recipe) return;
+    
+    try {
+      setReviewsLoading(true);
+      const [fetchedReviews, ratingData] = await Promise.all([
+        getRecipeReviews(recipe.id),
+        calculateAverageRating(recipe.id)
+      ]);
+      
+      setReviews(fetchedReviews);
+      setAverageRating(ratingData);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const checkUserReview = async () => {
+    if (!recipe || !currentUser) return;
+    
+    try {
+      const review = await getUserReview(recipe.id, currentUser.uid);
+      setUserReview(review);
+    } catch (error) {
+      console.error('Error checking user review:', error);
+    }
+  };
+
+  const handleAddReview = async (rating: number, comment: string) => {
+    if (!currentUser || !recipe) return;
+    
+    try {
+      if (userReview) {
+        // Update existing review
+        await updateRecipeReview(userReview.id!, recipe.id, { rating, comment });
+        Alert.alert('Success', 'Review updated successfully');
+      } else {
+        // Add new review
+        await addRecipeReview(recipe.id, {
+          userId: currentUser.uid,
+          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          rating,
+          comment
+        });
+        Alert.alert('Success', 'Review added successfully');
+      }
+      
+      // Reload reviews
+      await loadReviews();
+      await checkUserReview();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save review');
+      console.error(error);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!userReview || !recipe) return;
+    
+    Alert.alert('Delete Review', 'Are you sure you want to delete your review?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteRecipeReview(recipe.id, userReview.id!);
+            setUserReview(null);
+            await loadReviews();
+            Alert.alert('Success', 'Review deleted successfully');
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete review');
+          }
+        },
+      },
+    ]);
   };
 
   const checkIfFavorite = async () => {
@@ -149,9 +259,7 @@ export default function RecipeDetail() {
     }
   };
 
-  // 🟣 SIMPLE TIMER FUNCTIONS (keep it simple)
-
-  // Start timer with minutes
+  // 🟣 SIMPLE TIMER FUNCTIONS
   const startCookingTimer = (minutes: number) => {
     if (minutes <= 0) return;
     
@@ -176,7 +284,6 @@ export default function RecipeDetail() {
     }, 1000);
   };
 
-  // Pause timer
   const pauseCookingTimer = () => {
     if (!cookingTimer.active || cookingTimer.paused) return;
     
@@ -184,7 +291,6 @@ export default function RecipeDetail() {
     setCookingTimer(prev => ({ ...prev, paused: true }));
   };
 
-  // Resume timer
   const resumeCookingTimer = () => {
     if (!cookingTimer.active || !cookingTimer.paused) return;
     
@@ -202,7 +308,6 @@ export default function RecipeDetail() {
     }, 1000);
   };
 
-  // Reset timer
   const resetCookingTimer = () => {
     if (timerInterval.current) {
       clearInterval(timerInterval.current);
@@ -210,7 +315,6 @@ export default function RecipeDetail() {
     setCookingTimer({ seconds: 0, active: false, paused: false });
   };
 
-  // Format time display
   const formatCookingTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -379,43 +483,59 @@ export default function RecipeDetail() {
             )}
           </View>
 
-          {/* Recipe Meta Cards */}
-          <View style={styles.metaCards}>
-            <View style={styles.metaCard}>
-              <View style={styles.metaIconContainer}>
-                <MaterialIcons name="category" size={24} color="#F97316" />
+          {/* Recipe Meta Cards - FIXED UI */}
+          <View style={styles.metaCardsContainer}>
+            <Text style={styles.metaCardsTitle}>Recipe Details</Text>
+            <View style={styles.metaCards}>
+              <View style={styles.metaCard}>
+                <View style={styles.metaIconContainer}>
+                  <MaterialIcons name="category" size={22} color="#F97316" />
+                </View>
+                <Text style={styles.metaLabel}>Category</Text>
+                <Text style={styles.metaValue} numberOfLines={1}>{recipe.category}</Text>
               </View>
-              <Text style={styles.metaLabel}>Category</Text>
-              <Text style={styles.metaValue}>{recipe.category}</Text>
-            </View>
 
-            <View style={styles.metaCard}>
-              <View style={[styles.metaIconContainer, { backgroundColor: getDifficultyColor(recipe.difficulty) + '20' }]}>
-                <MaterialIcons 
-                  name="speed" 
-                  size={24} 
-                  color={getDifficultyColor(recipe.difficulty)} 
-                />
+              <View style={styles.metaCard}>
+                <View style={[styles.metaIconContainer, { backgroundColor: getDifficultyColor(recipe.difficulty) + '15' }]}>
+                  <MaterialIcons 
+                    name="speed" 
+                    size={22} 
+                    color={getDifficultyColor(recipe.difficulty)} 
+                  />
+                </View>
+                <Text style={styles.metaLabel}>Difficulty</Text>
+                <Text style={[styles.metaValue, { color: getDifficultyColor(recipe.difficulty) }]}>
+                  {recipe.difficulty}
+                </Text>
               </View>
-              <Text style={styles.metaLabel}>Difficulty</Text>
-              <Text style={[styles.metaValue, { color: getDifficultyColor(recipe.difficulty) }]}>
-                {recipe.difficulty}
-              </Text>
-            </View>
 
-            <View style={styles.metaCard}>
-              <View style={styles.metaIconContainer}>
-                <MaterialIcons name="timer" size={24} color="#10B981" />
+              <View style={styles.metaCard}>
+                <View style={styles.metaIconContainer}>
+                  <MaterialIcons name="timer" size={22} color="#10B981" />
+                </View>
+                <Text style={styles.metaLabel}>Time</Text>
+                <Text style={[styles.metaValue, { color: '#10B981' }]}>{recipe.cookingTime} min</Text>
               </View>
-              <Text style={styles.metaLabel}>Time</Text>
-              <Text style={[styles.metaValue, { color: '#10B981' }]}>{recipe.cookingTime} min</Text>
+
+              {/* 🟠 Rating Card */}
+              <View style={styles.metaCard}>
+                <View style={styles.metaIconContainer}>
+                  <MaterialIcons name="star" size={22} color="#F59E0B" />
+                </View>
+                <Text style={styles.metaLabel}>Rating</Text>
+                <View style={styles.ratingContainer}>
+                  <Text style={styles.ratingValue}>{averageRating.average.toFixed(1)}</Text>
+                  <MaterialIcons name="star" size={12} color="#F59E0B" />
+                </View>
+                <Text style={styles.ratingCount}>{averageRating.count} reviews</Text>
+              </View>
             </View>
           </View>
 
           {/* Description Card */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <MaterialIcons name="description" size={22} color="#F97316" />
+              <MaterialIcons name="description" size={20} color="#F97316" />
               <Text style={styles.sectionTitle}>Description</Text>
             </View>
             <Text style={styles.description}>{recipe.description}</Text>
@@ -424,17 +544,17 @@ export default function RecipeDetail() {
           {/* Ingredients Card */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <MaterialIcons name="restaurant" size={22} color="#F97316" />
+              <MaterialIcons name="restaurant" size={20} color="#F97316" />
               <Text style={styles.sectionTitle}>Ingredients</Text>
               <View style={styles.countBadge}>
                 <Text style={styles.countBadgeText}>{recipe.ingredients?.length || 0}</Text>
               </View>
             </View>
-            <View style={styles.ingredientsGrid}>
+            <View style={styles.ingredientsList}>
               {recipe.ingredients?.map((ingredient: string, index: number) => (
                 <View key={index} style={styles.ingredientItem}>
                   <View style={styles.ingredientBullet}>
-                    <MaterialIcons name="check-circle" size={16} color="#10B981" />
+                    <MaterialIcons name="check" size={14} color="#10B981" />
                   </View>
                   <Text style={styles.ingredientText}>{ingredient}</Text>
                 </View>
@@ -442,10 +562,10 @@ export default function RecipeDetail() {
             </View>
           </View>
 
-          {/* Steps Card */}
+          {/* Steps Card - SIMPLE STYLE */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <MaterialIcons name="list" size={22} color="#F97316" />
+              <MaterialIcons name="list" size={20} color="#F97316" />
               <Text style={styles.sectionTitle}>Steps</Text>
               <View style={styles.countBadge}>
                 <Text style={styles.countBadgeText}>{recipe.steps?.length || 0}</Text>
@@ -454,18 +574,114 @@ export default function RecipeDetail() {
             <View style={styles.stepsList}>
               {recipe.steps?.map((step: string, index: number) => (
                 <View key={index} style={styles.stepItem}>
-                  <View style={styles.stepNumber}>
-                    <Text style={styles.stepNumberText}>{index + 1}</Text>
-                  </View>
-                  <View style={styles.stepContent}>
-                    <Text style={styles.stepText}>{step}</Text>
-                  </View>
+                  <Text style={styles.stepNumber}>Step {index + 1}</Text>
+                  <Text style={styles.stepText}>{step}</Text>
                 </View>
               ))}
             </View>
           </View>
+
+          {/* 🟠 Reviews Card */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="reviews" size={20} color="#F97316" />
+              <Text style={styles.sectionTitle}>Reviews</Text>
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{reviews.length}</Text>
+              </View>
+            </View>
+
+            {/* Add Review Button */}
+            {currentUser ? (
+              userReview ? (
+                <View style={styles.userReviewActions}>
+                  <Pressable 
+                    style={styles.editReviewButton}
+                    onPress={() => setShowReviewModal(true)}
+                  >
+                    <MaterialIcons name="edit" size={16} color="#3B82F6" />
+                    <Text style={styles.editReviewText}>Edit Your Review</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={styles.deleteReviewButton}
+                    onPress={handleDeleteReview}
+                  >
+                    <MaterialIcons name="delete-outline" size={16} color="#EF4444" />
+                    <Text style={styles.deleteReviewText}>Delete</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable 
+                  style={styles.addReviewButton}
+                  onPress={() => setShowReviewModal(true)}
+                >
+                  <MaterialIcons name="add-comment" size={18} color="white" />
+                  <Text style={styles.addReviewText}>Add Your Review</Text>
+                </Pressable>
+              )
+            ) : (
+              <Pressable 
+                style={styles.loginToReviewButton}
+                onPress={() => router.push('/login')}
+              >
+                <MaterialIcons name="login" size={18} color="white" />
+                <Text style={styles.loginToReviewText}>Login to Review</Text>
+              </Pressable>
+            )}
+
+            {/* Reviews List */}
+            {reviewsLoading ? (
+              <ActivityIndicator size="small" color="#F97316" style={{ marginTop: 20 }} />
+            ) : reviews.length > 0 ? (
+              <View style={styles.reviewsList}>
+                {reviews.slice(0, 3).map((review) => (
+                  <View key={review.id} style={styles.reviewItem}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewerInfo}>
+                        <MaterialIcons name="person" size={14} color="#6B7280" />
+                        <Text style={styles.reviewerName}>{review.userName}</Text>
+                      </View>
+                      <View style={styles.reviewRating}>
+                        <Text style={styles.reviewRatingText}>{review.rating}.0</Text>
+                        <MaterialIcons name="star" size={12} color="#F59E0B" />
+                      </View>
+                    </View>
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                    <Text style={styles.reviewDate}>
+                      {new Date(review.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                ))}
+                
+                {reviews.length > 3 && (
+                  <Pressable 
+                    style={styles.viewAllReviewsButton}
+                    onPress={() => Alert.alert('Info', 'More reviews feature coming soon!')}
+                  >
+                    <Text style={styles.viewAllReviewsText}>
+                      View all {reviews.length} reviews
+                    </Text>
+                    <MaterialIcons name="chevron-right" size={16} color="#F97316" />
+                  </Pressable>
+                )}
+              </View>
+            ) : (
+              <View style={styles.noReviews}>
+                <MaterialIcons name="rate-review" size={36} color="#D1D5DB" />
+                <Text style={styles.noReviewsText}>No reviews yet. Be the first!</Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
+
+      {/* Review Modal */}
+      <ReviewModal
+        visible={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        onSubmit={handleAddReview}
+        userReview={userReview}
+      />
     </View>
   );
 }
@@ -542,7 +758,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: -30,
     borderRadius: 24,
-    padding: 24,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -556,33 +772,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   backButtonIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   headerIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   titleSection: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: 8,
@@ -591,16 +807,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     alignSelf: 'flex-start',
   },
   creatorIcon: {
-    marginRight: 6,
+    marginRight: 5,
   },
   creatorText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
   },
   creatorName: {
@@ -612,7 +828,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#10B98120',
   },
@@ -622,28 +838,28 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   timerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#10B981',
-    marginLeft: 10,
+    marginLeft: 8,
   },
   timerDisplay: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   timerText: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#10B981',
   },
   timerStatus: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     marginTop: 4,
   },
   timerButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   timerButtonGreen: {
     flex: 1,
@@ -651,9 +867,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#10B981',
-    padding: 12,
+    padding: 10,
     borderRadius: 10,
-    gap: 8,
+    gap: 6,
   },
   timerButtonYellow: {
     flex: 1,
@@ -661,9 +877,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F59E0B',
-    padding: 12,
+    padding: 10,
     borderRadius: 10,
-    gap: 8,
+    gap: 6,
   },
   timerButtonGray: {
     flex: 1,
@@ -671,13 +887,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#6B7280',
-    padding: 12,
+    padding: 10,
     borderRadius: 10,
-    gap: 8,
+    gap: 6,
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   startTimerButton: {
@@ -685,145 +901,308 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#10B981',
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
-    gap: 10,
+    gap: 8,
   },
   startButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
-  // End Timer Styles
+  // Meta Cards Container
+  metaCardsContainer: {
+    marginBottom: 24,
+  },
+  metaCardsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
   metaCards: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
   },
   metaCard: {
-    flex: 1,
+    width: '48%', // 2 cards per row
     backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
     alignItems: 'center',
+    marginBottom: 10,
   },
   metaIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#FFEDD5',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   metaLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
     marginBottom: 4,
+    textAlign: 'center',
   },
   metaValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
+    textAlign: 'center',
   },
+  // 🟠 Rating Styles
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginBottom: 2,
+  },
+  ratingValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  ratingCount: {
+    fontSize: 10,
+    color: '#6B7280',
+  },
+  // Section Cards
   sectionCard: {
     backgroundColor: '#F9FAFB',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    padding: 18,
+    marginBottom: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#1f2937',
-    marginLeft: 10,
+    marginLeft: 8,
     flex: 1,
   },
   countBadge: {
     backgroundColor: 'white',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   countBadgeText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
     fontWeight: '600',
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
     color: '#4B5563',
   },
-  ingredientsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
+  // Ingredients List
+  ingredientsList: {
+    gap: 10,
   },
   ingredientItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: 'white',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
-    flexBasis: '48%',
-    flexGrow: 1,
+    borderRadius: 10,
   },
   ingredientBullet: {
-    marginRight: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#10B98115',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    marginTop: 2,
   },
   ingredientText: {
     fontSize: 14,
     color: '#374151',
     flex: 1,
+    lineHeight: 20,
   },
+  // Steps List - SIMPLE STYLE
   stepsList: {
     gap: 12,
   },
   stepItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     backgroundColor: 'white',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  stepNumber: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#F97316',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stepNumberText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  stepContent: {
-    flex: 1,
+    borderRadius: 10,
     padding: 14,
   },
+  stepNumber: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#F97316',
+    marginBottom: 6,
+  },
   stepText: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 20,
     color: '#374151',
+  },
+  // 🟠 Review Styles
+  userReviewActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  editReviewButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    padding: 10,
+    borderRadius: 10,
+    gap: 5,
+  },
+  editReviewText: {
+    color: '#3B82F6',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  deleteReviewButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+    padding: 10,
+    borderRadius: 10,
+    gap: 5,
+  },
+  deleteReviewText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  addReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10B981',
+    padding: 12,
+    borderRadius: 12,
+    gap: 8,
+    marginBottom: 16,
+  },
+  addReviewText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  loginToReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F97316',
+    padding: 12,
+    borderRadius: 12,
+    gap: 8,
+    marginBottom: 16,
+  },
+  loginToReviewText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  reviewsList: {
+    gap: 14,
+  },
+  reviewItem: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  reviewerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  reviewerName: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  reviewRatingText: {
+    fontSize: 11,
+    color: '#92400E',
+    fontWeight: '600',
+  },
+  reviewComment: {
+    fontSize: 13,
+    color: '#4B5563',
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  reviewDate: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'right',
+  },
+  viewAllReviewsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    gap: 5,
+  },
+  viewAllReviewsText: {
+    color: '#F97316',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  noReviews: {
+    alignItems: 'center',
+    padding: 16,
+  },
+  noReviewsText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 10,
   },
   backButton: {
     backgroundColor: '#F97316',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   backButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
 });

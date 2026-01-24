@@ -272,7 +272,7 @@ const RecipePreloader = ({ onComplete }: { onComplete?: () => void }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff9f0', // Soft warm background
+    backgroundColor: '#fff9f0', 
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
@@ -299,16 +299,16 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   circle1: {
-    backgroundColor: '#F97316', // Orange for carrots/orange vegetables
+    backgroundColor: '#F97316', 
   },
   circle2: {
-    backgroundColor: '#10B981', // Green for herbs/vegetables
+    backgroundColor: '#10B981', 
   },
   circle3: {
-    backgroundColor: '#F59E0B', // Yellow for spices/lemons
+    backgroundColor: '#F59E0B', 
   },
   circle4: {
-    backgroundColor: '#8B5CF6', // Purple for berries/eggplant
+    backgroundColor: '#8B5CF6', 
   },
   textContainer: {
     alignItems: 'center',
@@ -316,8 +316,8 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 56,
-    fontWeight: '900', // Extra bold like second example
-    color: '#000000', // Black text like second example
+    fontWeight: '900', 
+    color: '#000000', 
     marginBottom: 12,
     textAlign: 'center',
     letterSpacing: 1.5,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#6b7280',
     fontWeight: '500',
-    fontStyle: 'normal', // Removed italic
+    fontStyle: 'normal',
     letterSpacing: 0.5,
   },
 });

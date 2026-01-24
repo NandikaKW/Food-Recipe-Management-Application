@@ -27,7 +27,15 @@ export interface Recipe {
   createdBy: string;
   createdAt: Date;
 }
-
+export interface Review {
+  id?: string;
+  recipeId: string;
+  userId: string;
+  userName: string;
+  rating: number; // 1-5
+  comment: string;
+  createdAt: Date;
+}
 const CLOUD_NAME = "dvqm3oewy"; 
 const UPLOAD_PRESET = "expoapp"; 
 
@@ -221,7 +229,7 @@ export const uploadImageToCloudinary = async (imageUri: string): Promise<string>
   }
 };
 
-// 🟡 FAVORITES FUNCTIONS
+
 // Add recipe to favorites
 export const addToFavorites = async (userId: string, recipeId: string): Promise<void> => {
   try {
@@ -285,5 +293,148 @@ export const isRecipeInFavorites = async (userId: string, recipeId: string): Pro
   } catch (error) {
     console.error('Error checking favorite:', error);
     return false;
+  }
+};
+
+// 🟠 FUNCTION: addRecipeReview(recipeId, reviewData)
+export const addRecipeReview = async (
+  recipeId: string, 
+  reviewData: Omit<Review, 'id' | 'recipeId' | 'createdAt'>
+): Promise<string> => {
+  try {
+    const reviewToAdd = {
+      ...reviewData,
+      recipeId,
+      createdAt: Timestamp.now()
+    };
+    
+    const docRef = await addDoc(collection(db, 'recipes', recipeId, 'reviews'), reviewToAdd);
+    return docRef.id;
+  } catch (error) {
+    console.error('Error adding review:', error);
+    throw error;
+  }
+};
+
+// 🟠 FUNCTION: getRecipeReviews(recipeId)
+export const getRecipeReviews = async (recipeId: string): Promise<Review[]> => {
+  try {
+    const reviewsRef = collection(db, 'recipes', recipeId, 'reviews');
+    const querySnapshot = await getDocs(reviewsRef);
+    
+    const reviews: Review[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      reviews.push({
+        id: doc.id,
+        recipeId: data.recipeId,
+        userId: data.userId,
+        userName: data.userName,
+        rating: data.rating,
+        comment: data.comment,
+        createdAt: data.createdAt?.toDate() || new Date()
+      });
+    });
+    
+    // Sort by newest first
+    return reviews.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  } catch (error) {
+    console.error('Error getting reviews:', error);
+    return [];
+  }
+};
+
+// 🟠 FUNCTION: calculateAverageRating(recipeId)
+export const calculateAverageRating = async (recipeId: string): Promise<{
+  average: number;
+  total: number;
+  count: number;
+}> => {
+  try {
+    const reviews = await getRecipeReviews(recipeId);
+    
+    if (reviews.length === 0) {
+      return { average: 0, total: 0, count: 0 };
+    }
+    
+    const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const average = total / reviews.length;
+    
+    return {
+      average: Number(average.toFixed(1)),
+      total,
+      count: reviews.length
+    };
+  } catch (error) {
+    console.error('Error calculating average rating:', error);
+    return { average: 0, total: 0, count: 0 };
+  }
+};
+
+// Check if user has already reviewed a recipe
+export const hasUserReviewed = async (recipeId: string, userId: string): Promise<boolean> => {
+  try {
+    const reviewsRef = collection(db, 'recipes', recipeId, 'reviews');
+    const q = query(reviewsRef, where('userId', '==', userId));
+    const querySnapshot = await getDocs(q);
+    
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking user review:', error);
+    return false;
+  }
+};
+
+// Get user's review for a recipe
+export const getUserReview = async (recipeId: string, userId: string): Promise<Review | null> => {
+  try {
+    const reviewsRef = collection(db, 'recipes', recipeId, 'reviews');
+    const q = query(reviewsRef, where('userId', '==', userId));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const doc = querySnapshot.docs[0];
+      const data = doc.data();
+      return {
+        id: doc.id,
+        recipeId: data.recipeId,
+        userId: data.userId,
+        userName: data.userName,
+        rating: data.rating,
+        comment: data.comment,
+        createdAt: data.createdAt?.toDate() || new Date()
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting user review:', error);
+    return null;
+  }
+};
+
+// Update user's review
+export const updateRecipeReview = async (
+  reviewId: string,
+  recipeId: string,
+  updatedData: { rating: number; comment: string }
+): Promise<void> => {
+  try {
+    const reviewRef = doc(db, 'recipes', recipeId, 'reviews', reviewId);
+    await updateDoc(reviewRef, updatedData);
+  } catch (error) {
+    console.error('Error updating review:', error);
+    throw error;
+  }
+};
+
+// Delete review
+export const deleteRecipeReview = async (recipeId: string, reviewId: string): Promise<void> => {
+  try {
+    const reviewRef = doc(db, 'recipes', recipeId, 'reviews', reviewId);
+    await deleteDoc(reviewRef);
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    throw error;
   }
 };
