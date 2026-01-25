@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
-  Text,
+  Image,
   StyleSheet,
   Animated,
   Dimensions,
-  Easing,
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -14,256 +13,58 @@ const RecipePreloader = ({ onComplete }: { onComplete?: () => void }) => {
   const [loading, setLoading] = useState(true);
   
   // Animation values
-  const circle1Pos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const circle2Pos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const circle3Pos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const circle4Pos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  
-  const circle1Scale = useRef(new Animated.Value(1)).current;
-  const circle2Scale = useRef(new Animated.Value(1)).current;
-  const circle3Scale = useRef(new Animated.Value(1)).current;
-  const circle4Scale = useRef(new Animated.Value(1)).current;
-  
-  const circle1Opacity = useRef(new Animated.Value(1)).current;
-  const circle2Opacity = useRef(new Animated.Value(1)).current;
-  const circle3Opacity = useRef(new Animated.Value(1)).current;
-  const circle4Opacity = useRef(new Animated.Value(1)).current;
-  
-  const textScale = useRef(new Animated.Value(0.8)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  
-  // Rotation animation for dots container
-  const rotateValue = useRef(new Animated.Value(0)).current;
+  const progressWidth = useRef(new Animated.Value(0)).current;
+  const logoOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    startAnimations();
-  }, []);
+    // Animate progress bar from 0 to 100%
+    Animated.timing(progressWidth, {
+      toValue: 1,
+      duration: 2500,
+      useNativeDriver: false,
+    }).start();
 
-  const startAnimations = () => {
-    // Rotation animation for dots container
-    Animated.loop(
-      Animated.timing(rotateValue, {
-        toValue: 1,
-        duration: 3000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    ).start();
-
-    // Circles floating animation
-    const createCircleAnimation = (
-      pos: Animated.ValueXY,
-      scale: Animated.Value,
-      opacity: Animated.Value,
-      x: number,
-      y: number,
-      delay: number
-    ) => {
-      return Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.parallel([
-            Animated.timing(pos, {
-              toValue: { x, y },
-              duration: 1200,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(scale, {
-              toValue: 1.2,
-              duration: 600,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 0.8,
-              duration: 600,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.timing(pos, {
-              toValue: { x: 0, y: 0 },
-              duration: 1200,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(scale, {
-              toValue: 1,
-              duration: 600,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 1,
-              duration: 600,
-              easing: Easing.inOut(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      );
-    };
-
-    // Start all circle animations
-    createCircleAnimation(circle1Pos, circle1Scale, circle1Opacity, 50, -40, 0).start();
-    createCircleAnimation(circle2Pos, circle2Scale, circle2Opacity, -50, -40, 200).start();
-    createCircleAnimation(circle3Pos, circle3Scale, circle3Opacity, 50, 40, 400).start();
-    createCircleAnimation(circle4Pos, circle4Scale, circle4Opacity, -50, 40, 600).start();
-
-    // Text animation
-    Animated.sequence([
-      Animated.delay(500),
-      Animated.parallel([
-        Animated.timing(textOpacity, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(textScale, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-
-    // Text pulse animation (continuous)
-    Animated.loop(
-      Animated.sequence([
-        Animated.delay(1500),
-        Animated.timing(textScale, {
-          toValue: 1.05,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(textScale, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Hide preloader after 3 seconds
+    // Hide preloader after 2.5 seconds
     const timer = setTimeout(() => {
-      setLoading(false);
-      if (onComplete) {
-        onComplete();
-      }
-    }, 3000);
+      Animated.timing(logoOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setLoading(false);
+        if (onComplete) onComplete();
+      });
+    }, 2500);
 
     return () => clearTimeout(timer);
-  };
+  }, []);
 
   if (!loading) return null;
 
-  // Rotation interpolation
-  const rotateInterpolate = rotateValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   return (
     <View style={styles.container}>
-      {/* Rotating dots container */}
-      <Animated.View 
-        style={[
-          styles.dotsContainer,
-          { transform: [{ rotate: rotateInterpolate }] }
-        ]}
-      >
-        {/* Background circles with food colors */}
-        <Animated.View 
-          style={[
-            styles.circle,
-            styles.circle1,
-            {
-              transform: [
-                { translateX: circle1Pos.x },
-                { translateY: circle1Pos.y },
-                { scale: circle1Scale }
-              ],
-              opacity: circle1Opacity
-            }
-          ]} 
-        />
-        
-        <Animated.View 
-          style={[
-            styles.circle,
-            styles.circle2,
-            {
-              transform: [
-                { translateX: circle2Pos.x },
-                { translateY: circle2Pos.y },
-                { scale: circle2Scale }
-              ],
-              opacity: circle2Opacity
-            }
-          ]} 
-        />
-        
-        <Animated.View 
-          style={[
-            styles.circle,
-            styles.circle3,
-            {
-              transform: [
-                { translateX: circle3Pos.x },
-                { translateY: circle3Pos.y },
-                { scale: circle3Scale }
-              ],
-              opacity: circle3Opacity
-            }
-          ]} 
-        />
-        
-        <Animated.View 
-          style={[
-            styles.circle,
-            styles.circle4,
-            {
-              transform: [
-                { translateX: circle4Pos.x },
-                { translateY: circle4Pos.y },
-                { scale: circle4Scale }
-              ],
-              opacity: circle4Opacity
-            }
-          ]} 
+      {/* Extra Large Logo - Increased size */}
+      <Animated.View style={[styles.logoContainer, { opacity: logoOpacity }]}>
+        <Image
+          source={require('../../assets/images/logo1.png')}
+          style={styles.logo}
+          resizeMode="contain"
         />
       </Animated.View>
 
-      {/* Text content */}
-      <View style={styles.textContainer}>
-        <Animated.Text 
+      {/* Progress Bar */}
+      <View style={styles.progressContainer}>
+        <Animated.View 
           style={[
-            styles.primaryText,
+            styles.progressBar,
             {
-              opacity: textOpacity,
-              transform: [{ scale: textScale }]
+              width: progressWidth.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0%', '100%'],
+              }),
             }
-          ]}
-        >
-          CookBook
-        </Animated.Text>
-        
-        <Animated.Text 
-          style={[
-            styles.secondaryText,
-            {
-              opacity: textOpacity
-            }
-          ]}
-        >
-          Your Recipe Companion
-        </Animated.Text>
+          ]} 
+        />
       </View>
     </View>
   );
@@ -272,7 +73,7 @@ const RecipePreloader = ({ onComplete }: { onComplete?: () => void }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff9f0', 
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
@@ -280,57 +81,31 @@ const styles = StyleSheet.create({
     height: '100%',
     zIndex: 9999,
   },
-  dotsContainer: {
-    width: 220,
-    height: 220,
+  logoContainer: {
+    // Increased from width * 0.9 to width * 0.95 (95% of screen width)
+    width: width * 0.95, 
+    height: width * 0.95, // Keep it square
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 50, // Increased margin for better spacing
   },
-  circle: {
+  logo: {
+    width: '100%',
+    height: '100%',
+  },
+  progressContainer: {
     position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    bottom: 100, // Adjusted position for larger logo
+    width: width * 0.8, // Made progress bar wider to match logo size
+    height: 5, // Slightly thicker progress bar
+    backgroundColor: '#e5e7eb',
+    borderRadius: 2.5,
+    overflow: 'hidden',
   },
-  circle1: {
-    backgroundColor: '#F97316', 
-  },
-  circle2: {
-    backgroundColor: '#10B981', 
-  },
-  circle3: {
-    backgroundColor: '#F59E0B', 
-  },
-  circle4: {
-    backgroundColor: '#8B5CF6', 
-  },
-  textContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-  },
-  primaryText: {
-    fontSize: 56,
-    fontWeight: '900', 
-    color: '#000000', 
-    marginBottom: 12,
-    textAlign: 'center',
-    letterSpacing: 1.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  secondaryText: {
-    fontSize: 18,
-    color: '#6b7280',
-    fontWeight: '500',
-    fontStyle: 'normal',
-    letterSpacing: 0.5,
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#F97316',
+    borderRadius: 2.5,
   },
 });
 

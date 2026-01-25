@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
+   Animated,
+  Dimensions
 } from 'react-native';
 import { router } from 'expo-router';
 import { 
@@ -20,6 +22,7 @@ import {
 } from '../../services/recipeService';
 import { getCurrentUser, getUserData } from '../../services/authService';
 import { MaterialIcons } from '@expo/vector-icons';
+import RecipePreloader from '../components/SplashScreen';
 
 interface RecipeItem {
   id: string;
@@ -124,7 +127,7 @@ export default function Recipes() {
     }
   };
 
-  // 🟡 SEARCH FUNCTION: searchRecipes(keyword)
+  //  searchRecipes(keyword)
   const searchRecipes = (keyword: string) => {
     if (!keyword.trim()) {
       return recipes;
@@ -137,13 +140,13 @@ export default function Recipes() {
     );
   };
 
-  // 🟡 FILTER FUNCTION: filterRecipesByTime(time)
+  //  filterRecipesByTime(time)
   const filterRecipesByTime = (timeRange: string) => {
     setSelectedTime(timeRange);
     setShowFilterModal(false);
   };
 
-  // 🟡 FILTER FUNCTION: filterRecipesByDifficulty(level)
+  // filterRecipesByDifficulty(level)
   const filterRecipesByDifficulty = (level: string) => {
     setSelectedDifficulty(level);
     setShowFilterModal(false);
@@ -191,7 +194,7 @@ export default function Recipes() {
     setShowFilterModal(false);
   };
 
-  // 🟡 FAVORITE FUNCTION: toggleFavorite(recipeId)
+  // toggleFavorite(recipeId)
   const handleToggleFavorite = async (recipeId: string) => {
     if (!currentUser) {
       Alert.alert('Login Required', 'Please login to save favorites');
@@ -397,26 +400,10 @@ export default function Recipes() {
     );
   };
 
+ // Use RecipePreloader during loading
   if (loading) {
-  return (
-    <View style={styles.loadingContainer}>
-      {/* Animated Dots */}
-      <View style={styles.dotsRow}>
-        <View style={[styles.dot, styles.dotOrange]} />
-        <View style={[styles.dot, styles.dotGreen]} />
-        <View style={[styles.dot, styles.dotYellow]} />
-        <View style={[styles.dot, styles.dotPurple]} />
-      </View>
-      
-      {/* Text Content */}
-      <Text style={styles.loadingTitle}>CookBook</Text>
-      <Text style={styles.loadingText}>Loading delicious recipes...</Text>
-      
-      {/* Subtle Activity Indicator */}
-      <ActivityIndicator size="large" color="#F97316" style={{ marginTop: 20 }} />
-    </View>
-  );
-}
+    return <RecipePreloader />;
+  }
 
   const favoriteCount = Object.values(favorites).filter(fav => fav).length;
 
@@ -682,60 +669,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     paddingTop: 50,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    paddingHorizontal: 20,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 30,
-    gap: 12,
-  },
-  dot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  dotOrange: {
-    backgroundColor: '#F97316',
-  },
-  dotGreen: {
-    backgroundColor: '#10B981',
-  },
-  dotYellow: {
-    backgroundColor: '#FBBF24',
-  },
-  dotPurple: {
-    backgroundColor: '#8B5CF6',
-  },
-  loadingTitle: {
-    fontSize: 40,
-    fontWeight: '900',
-    color: '#1f2937',
-    marginBottom: 8,
-    textAlign: 'center',
-    letterSpacing: 1,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 20,
-    fontWeight: '500',
   },
   header: {
     paddingHorizontal: 20,
