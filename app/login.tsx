@@ -19,7 +19,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [showPreloader, setShowPreloader] = useState(false) // State for preloader
+  const [showPreloader, setShowPreloader] = useState(false) 
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -30,10 +30,10 @@ export default function Login() {
     try {
       await loginUser(email, password)
       
-      // Don't show alert, show preloader instead
-      setShowPreloader(true) // Show the preloader
       
-      // Wait for preloader animation (2 seconds) then navigate
+      setShowPreloader(true) 
+      
+      
       setTimeout(() => {
         router.replace('/')
       }, 2000)
@@ -44,7 +44,7 @@ export default function Login() {
     }
   }
 
-  // If preloader is showing, only show the preloader
+  
   if (showPreloader) {
     return <Preloader />
   }

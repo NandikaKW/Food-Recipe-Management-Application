@@ -12,19 +12,19 @@ const { width, height } = Dimensions.get('window');
 const Preloader = ({ onComplete }: { onComplete?: () => void }) => {
   const [loading, setLoading] = useState(true);
   
-  // Animation values
+  
   const progressWidth = useRef(new Animated.Value(0)).current;
   const logoOpacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Animate progress bar from 0 to 100%
+    
     Animated.timing(progressWidth, {
       toValue: 1,
       duration: 2000,
       useNativeDriver: false,
     }).start();
 
-    // Hide preloader after 2 seconds
+    
     const timer = setTimeout(() => {
       Animated.timing(logoOpacity, {
         toValue: 0,
@@ -43,16 +43,16 @@ const Preloader = ({ onComplete }: { onComplete?: () => void }) => {
 
   return (
     <View style={styles.container}>
-      {/* Extra Large Logo - Big image logo like in the second example */}
+      
       <Animated.View style={[styles.logoContainer, { opacity: logoOpacity }]}>
         <Image
-          source={require('../../assets/images/logo3.png')} // Using logo3 as requested
+          source={require('../../assets/images/logo3.png')} 
           style={styles.logo}
           resizeMode="contain"
         />
       </Animated.View>
 
-      {/* Progress Bar */}
+      
       <View style={styles.progressContainer}>
         <Animated.View 
           style={[
@@ -73,7 +73,7 @@ const Preloader = ({ onComplete }: { onComplete?: () => void }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc', // Keeping your original background color
+    backgroundColor: '#f8fafc', 
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
@@ -82,11 +82,11 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   logoContainer: {
-    width: width * 0.95, // Large logo container (95% of screen width)
-    height: width * 0.95, // Keep it square
+    width: width * 0.95, 
+    height: width * 0.95, 
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 50, // Spacing for progress bar
+    marginBottom: 50, 
   },
   logo: {
     width: '100%',
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   progressContainer: {
     position: 'absolute',
     bottom: 100,
-    width: width * 0.8, // Wide progress bar
+    width: width * 0.8, 
     height: 5,
     backgroundColor: '#e5e7eb',
     borderRadius: 2.5,
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#F97316', // Using your orange color from dot1
+    backgroundColor: '#F97316', 
     borderRadius: 2.5,
   },
 });

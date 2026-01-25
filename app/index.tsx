@@ -20,14 +20,14 @@ export default function App() {
     router.replace('/')
   }
 
-  // Navigation with preloader
+  
   const navigateWithPreloader = (path: any) => {
     if (isNavigating) return
     
     setIsNavigating(true)
     setShowPreloader(true)
     
-    // Wait for preloader animation (3 seconds) then navigate
+   
     setTimeout(() => {
       router.push(path)
       setShowPreloader(false)
@@ -35,7 +35,7 @@ export default function App() {
     }, 3000)
   }
 
-  // If preloader is showing, only show the preloader
+  
   if (showPreloader) {
     return <RecipePreloader />
   }
@@ -116,7 +116,7 @@ export default function App() {
             </Pressable>
           </>
         ) : (
-          /* Login Button for Guest */
+          
           <Pressable
             style={[styles.actionButton, styles.primaryButton]}
             onPress={() => router.push('/login')}

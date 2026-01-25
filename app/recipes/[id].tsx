@@ -37,14 +37,14 @@ export default function RecipeDetail() {
   const currentUser = getCurrentUser();
   const [creatorName, setCreatorName] = useState<string>('User');
 
-  // 🟠 REVIEW STATES
+  //  REVIEW STATES
   const [reviews, setReviews] = useState<Review[]>([]);
   const [averageRating, setAverageRating] = useState({ average: 0, total: 0, count: 0 });
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [userReview, setUserReview] = useState<Review | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   
-  // 🟣 SIMPLE COOKING TIMER STATE
+  
   const [cookingTimer, setCookingTimer] = useState({
     seconds: 0,
     active: false,
@@ -104,7 +104,7 @@ export default function RecipeDetail() {
     }
   };
 
-  // 🟠 REVIEW FUNCTIONS
+  //  REVIEW FUNCTIONS
   const loadReviews = async () => {
     if (!recipe) return;
     
@@ -259,7 +259,7 @@ export default function RecipeDetail() {
     }
   };
 
-  // 🟣 SIMPLE TIMER FUNCTIONS
+  //  SIMPLE TIMER FUNCTIONS
   const startCookingTimer = (minutes: number) => {
     if (minutes <= 0) return;
     
@@ -426,7 +426,7 @@ export default function RecipeDetail() {
             </View>
           </View>
 
-          {/* 🟣 Simple Cooking Timer */}
+          {/*  Simple Cooking Timer */}
           <View style={styles.simpleTimerCard}>
             <View style={styles.timerHeader}>
               <MaterialIcons name="timer" size={22} color="#10B981" />
@@ -483,7 +483,7 @@ export default function RecipeDetail() {
             )}
           </View>
 
-          {/* Recipe Meta Cards - FIXED UI */}
+          {/* Recipe Meta Cards UI */}
           <View style={styles.metaCardsContainer}>
             <Text style={styles.metaCardsTitle}>Recipe Details</Text>
             <View style={styles.metaCards}>
@@ -517,7 +517,7 @@ export default function RecipeDetail() {
                 <Text style={[styles.metaValue, { color: '#10B981' }]}>{recipe.cookingTime} min</Text>
               </View>
 
-              {/* 🟠 Rating Card */}
+              {/*  Rating Card */}
               <View style={styles.metaCard}>
                 <View style={styles.metaIconContainer}>
                   <MaterialIcons name="star" size={22} color="#F59E0B" />
@@ -562,7 +562,7 @@ export default function RecipeDetail() {
             </View>
           </View>
 
-          {/* Steps Card - SIMPLE STYLE */}
+          {/* Steps Card  */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <MaterialIcons name="list" size={20} color="#F97316" />
@@ -581,7 +581,7 @@ export default function RecipeDetail() {
             </View>
           </View>
 
-          {/* 🟠 Reviews Card */}
+          {/*  Reviews Card */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <MaterialIcons name="reviews" size={20} color="#F97316" />
@@ -910,7 +910,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Meta Cards Container
+  
   metaCardsContainer: {
     marginBottom: 24,
   },
@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   metaCard: {
-    width: '48%', // 2 cards per row
+    width: '48%', 
     backgroundColor: '#F9FAFB',
     borderRadius: 14,
     padding: 14,
@@ -954,7 +954,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     textAlign: 'center',
   },
-  // 🟠 Rating Styles
+
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
-  // Steps List - SIMPLE STYLE
+  // Steps List 
   stepsList: {
     gap: 12,
   },
@@ -1053,7 +1053,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#374151',
   },
-  // 🟠 Review Styles
+  //  Review Styles
   userReviewActions: {
     flexDirection: 'row',
     gap: 10,

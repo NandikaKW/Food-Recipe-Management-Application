@@ -63,7 +63,7 @@ export default function ReviewModal({ visible, onClose, onSubmit, userReview }: 
             </Pressable>
           </View>
 
-          {/* Rating Stars */}
+         
           <View style={styles.ratingSection}>
             <Text style={styles.ratingLabel}>Your Rating</Text>
             <View style={styles.starsContainer}>
@@ -84,7 +84,7 @@ export default function ReviewModal({ visible, onClose, onSubmit, userReview }: 
             <Text style={styles.ratingText}>{rating}.0 out of 5</Text>
           </View>
 
-          {/* Comment Input */}
+          
           <View style={styles.commentSection}>
             <Text style={styles.commentLabel}>Your Review</Text>
             <TextInput
@@ -99,7 +99,7 @@ export default function ReviewModal({ visible, onClose, onSubmit, userReview }: 
             />
           </View>
 
-          {/* Action Buttons */}
+          
           <View style={styles.modalActions}>
             <Pressable 
               style={styles.cancelButton} 

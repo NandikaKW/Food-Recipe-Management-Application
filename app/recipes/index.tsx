@@ -43,14 +43,14 @@ export default function Recipes() {
   const [userNames, setUserNames] = useState<Record<string, string>>({});
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   
-  // Search & Filter States
+  
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedTime, setSelectedTime] = useState<string>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   
-  // Time ranges for filtering
+  
   const timeRanges = [
     { label: 'All', min: 0, max: 9999 },
     { label: 'Quick (<15 min)', min: 0, max: 15 },
@@ -58,7 +58,7 @@ export default function Recipes() {
     { label: 'Long (>30 min)', min: 30, max: 9999 },
   ];
 
-  // Difficulty options
+  
   const difficultyOptions = ['All', 'Easy', 'Medium', 'Hard'];
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function Recipes() {
 
       const usersMap: Record<string, string> = {};
 
-      // Fetch user names for createdBy field
+      
       for (const recipe of allRecipes) {
         if (!usersMap[recipe.createdBy]) {
           const userData = await getUserData(recipe.createdBy);
@@ -100,7 +100,7 @@ export default function Recipes() {
       setRecipes(transformedRecipes);
       setFilteredRecipes(transformedRecipes);
 
-      // Load favorites for current user
+      
       if (currentUser) {
         loadUserFavorites(currentUser.uid, transformedRecipes.map(r => r.id));
       }
@@ -127,7 +127,7 @@ export default function Recipes() {
     }
   };
 
-  //  searchRecipes(keyword)
+  
   const searchRecipes = (keyword: string) => {
     if (!keyword.trim()) {
       return recipes;
@@ -140,28 +140,28 @@ export default function Recipes() {
     );
   };
 
-  //  filterRecipesByTime(time)
+  
   const filterRecipesByTime = (timeRange: string) => {
     setSelectedTime(timeRange);
     setShowFilterModal(false);
   };
 
-  // filterRecipesByDifficulty(level)
+  
   const filterRecipesByDifficulty = (level: string) => {
     setSelectedDifficulty(level);
     setShowFilterModal(false);
   };
 
-  // Apply all active filters
+  
   const applyFilters = () => {
     let result = [...recipes];
 
-    // Apply search filter
+   
     if (searchKeyword.trim()) {
       result = searchRecipes(searchKeyword);
     }
 
-    // Apply time filter
+    
     if (selectedTime !== 'All') {
       const timeRange = timeRanges.find(tr => tr.label === selectedTime);
       if (timeRange) {
@@ -171,12 +171,12 @@ export default function Recipes() {
       }
     }
 
-    // Apply difficulty filter
+    
     if (selectedDifficulty !== 'All') {
       result = result.filter(recipe => recipe.difficulty === selectedDifficulty);
     }
 
-    // Apply favorites filter
+    
     if (showFavorites) {
       result = result.filter(recipe => favorites[recipe.id]);
     }
@@ -184,7 +184,7 @@ export default function Recipes() {
     setFilteredRecipes(result);
   };
 
-  // Reset all filters
+  
   const resetFilters = () => {
     setSearchKeyword('');
     setSelectedTime('All');
@@ -194,7 +194,7 @@ export default function Recipes() {
     setShowFilterModal(false);
   };
 
-  // toggleFavorite(recipeId)
+ 
   const handleToggleFavorite = async (recipeId: string) => {
     if (!currentUser) {
       Alert.alert('Login Required', 'Please login to save favorites');
@@ -206,13 +206,13 @@ export default function Recipes() {
       const isFavorite = favorites[recipeId] || false;
       await toggleFavorite(currentUser.uid, recipeId, isFavorite);
       
-      // Update local state
+      
       setFavorites(prev => ({
         ...prev,
         [recipeId]: !isFavorite
       }));
       
-      // Show success message
+      
       if (!isFavorite) {
         Alert.alert('Success', 'Added to favorites!');
       }
@@ -400,7 +400,7 @@ export default function Recipes() {
     );
   };
 
- // Use RecipePreloader during loading
+ 
   if (loading) {
     return <RecipePreloader />;
   }

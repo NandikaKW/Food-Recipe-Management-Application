@@ -1,50 +1,212 @@
-# Welcome to your Expo app 👋
+# 🍳 CookBook – Recipe Management Mobile Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> A modern, feature-rich mobile application to **discover, create, and manage recipes**, built with **React Native** and **Firebase**.
 
-## Get started
+---
 
-1. Install dependencies
+## 📱 Project Overview
 
-   ```bash
-   npm install
-   ```
+**CookBook** is a cross-platform mobile recipe management app designed to help users explore new dishes, manage their own recipes, and enhance their cooking experience.
+It offers a **beautiful UI**, **secure authentication**, and **powerful recipe discovery tools**.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## ✨ Core Features
 
-In the output, you'll find options to open the app in a
+### 🔐 1. User Authentication
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+* Secure **Sign Up / Login** using Firebase Authentication
+* Persistent user sessions
+* Protected routes for authenticated users only
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+### 🍽️ 2. Recipe Management (CRUD)
 
-When you're ready, run:
+* ➕ Create recipes with:
 
-```bash
-npm run reset-project
+  * Title, description, category
+  * Difficulty level
+  * Cooking time
+  * Ingredients & steps
+* 📖 View all recipes with detailed screens
+* ✏️ Edit existing recipes
+* 🗑️ Delete your own recipes
+* 🖼️ Upload recipe images from device gallery
+
+---
+
+### 🔍 3. Advanced Recipe Discovery
+
+* Search recipes by **title, description, or category**
+* Filter recipes by:
+
+  * ⏱️ Cooking time (Quick / Medium / Long)
+  * 🔥 Difficulty (Easy / Medium / Hard)
+* ❤️ Favorites system for quick access
+* 📂 Category-based organization (Breakfast, Dessert, Italian, etc.)
+
+---
+
+### 👥 4. Social Features
+
+* ⭐ Rate recipes (1–5 stars)
+* 💬 Add reviews and comments
+* 📊 View average ratings
+* 🌍 Read feedback from other users
+
+---
+
+### ⏲️ 5. Cooking Tools
+
+* Built-in **cooking timer** (Start, Pause, Resume, Reset)
+* Step-by-step cooking instructions
+* Organized ingredient lists
+
+---
+
+## 🛠️ Technical Implementation
+
+### 🧱 Architecture
+
+* **Frontend:** React Native + TypeScript
+* **Backend:** Firebase
+
+  * Authentication
+  * Firestore Database
+  * Firebase Storage
+* **Routing:** Expo Router (file-based navigation)
+* **State Management:** React Hooks & Context API
+* **Platform:** iOS & Android
+
+---
+
+### 🔧 Key Technical Components
+
+* **Authentication Service:** User signup, login, logout & session handling
+* **Recipe Service:** CRUD operations, favorites & reviews
+* **Firebase Integration:** Real-time database sync
+* **Image Handling:** Upload & store images using Firebase Storage
+* **Form Validation:** Real-time validation with user feedback
+
+---
+
+## 🧩 Code Structure
+
+* ♻️ Modular reusable components (Preloader, ReviewModal, etc.)
+* 🧠 Service layer separated from UI logic
+* 🧾 TypeScript interfaces for all data models
+* 🚨 Centralized error handling with friendly messages
+
+---
+
+## 🎨 User Experience (UX)
+
+### Visual Design
+
+* 🎨 Consistent **Orange Theme** (`#F97316`)
+* 📦 Card-based recipe layout
+* 👆 Interactive buttons with feedback
+* ⏳ Smooth loading states
+
+### Navigation
+
+* Easy and intuitive screen flow
+* Clear back navigation
+* Modal interfaces for filters & reviews
+
+### Performance
+
+* ⚡ Optimized lists using `FlatList`
+* 🖼️ Lazy-loaded images
+* 🔁 Reduced unnecessary re-renders
+
+---
+
+## 🔐 Security Implementation
+
+* Firebase Email/Password authentication
+* Users can **only edit/delete their own recipes**
+* Protected database operations
+* Input validation & sanitization
+
+---
+
+## 🗄️ Database Structure
+
+```
+Firestore Collections:
+- recipes   → All recipe data
+- favorites → User-specific favorites
+- reviews   → Ratings & comments
+- users     → User profile information
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## ✅ Testing & Validation
 
-To learn more about developing your project with Expo, look at the following resources:
+* Form-level validation for all inputs
+* Graceful error handling
+* Clear success & error messages
+* Prevents invalid data submission
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+---
 
-## Join the community
+## 📱 Platform Compatibility
 
-Join our community of developers creating universal apps.
+* ✅ iOS (iPhone optimized)
+* ✅ Android support
+* 📐 Responsive for all screen sizes
+* ⌨️ Proper keyboard handling
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## 📋 Requirements & Implementation Status
+
+### Mandatory Requirements
+
+✅ Firebase Authentication
+✅ Full CRUD Operations
+✅ Multi-screen Navigation
+✅ State Management
+✅ Firestore & Storage Integration
+
+### Advanced Features
+
+✅ Image Upload
+✅ Search & Filter
+✅ Favorites System
+✅ Reviews & Ratings
+✅ Cooking Timer
+✅ Professional Responsive UI
+
+---
+
+## 🧰 Technologies Used
+
+* **React Native**
+* **TypeScript**
+* **Expo**
+* **Firebase (Auth, Firestore, Storage)**
+* **Expo ImagePicker**
+* **Material Icons**
+
+---
+
+## 📊 Project Scope
+
+* 🖥️ Screens: 8+ main screens
+* 🧩 Components: 3+ reusable components
+* 🔧 Services: Authentication & Recipe services
+* 🚀 Features: 10+ advanced features
+
+---
+
+## 👨‍💻 Author
+
+**Nandika Kaweesha Fernando**
+📍 Sri Lanka
+🚀 MERN & MEAN Stack Developer | Mobile App Developer
+
+
