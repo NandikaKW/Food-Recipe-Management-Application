@@ -73,7 +73,7 @@ const Preloader = ({ onComplete }: { onComplete?: () => void }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc', 
+    backgroundColor: '#ffffff', 
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',

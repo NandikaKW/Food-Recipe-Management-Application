@@ -6,7 +6,6 @@ import {
   Image,
   ScrollView,
   Alert,
-  ActivityIndicator,
   Pressable,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -26,6 +25,7 @@ import {
 import { getCurrentUser, getUserData } from '../../services/authService';
 import { MaterialIcons } from '@expo/vector-icons';
 import ReviewModal from './../components/ReviewModal';
+import RecipePreloader from '../components/SplashScreen'; 
 
 export default function RecipeDetail() {
   const { id } = useLocalSearchParams();
@@ -37,7 +37,7 @@ export default function RecipeDetail() {
   const currentUser = getCurrentUser();
   const [creatorName, setCreatorName] = useState<string>('User');
 
-  //  REVIEW STATES
+  // REVIEW STATES
   const [reviews, setReviews] = useState<Review[]>([]);
   const [averageRating, setAverageRating] = useState({ average: 0, total: 0, count: 0 });
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -104,7 +104,7 @@ export default function RecipeDetail() {
     }
   };
 
-  //  REVIEW FUNCTIONS
+  // REVIEW FUNCTIONS
   const loadReviews = async () => {
     if (!recipe) return;
     
@@ -259,7 +259,7 @@ export default function RecipeDetail() {
     }
   };
 
-  //  SIMPLE TIMER FUNCTIONS
+  // SIMPLE TIMER FUNCTIONS
   const startCookingTimer = (minutes: number) => {
     if (minutes <= 0) return;
     
@@ -321,15 +321,9 @@ export default function RecipeDetail() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Use the preloader when loading
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <View style={styles.loadingCard}>
-          <ActivityIndicator size="large" color="#F97316" />
-          <Text style={styles.loadingText}>Loading recipe...</Text>
-        </View>
-      </View>
-    );
+    return <RecipePreloader />;
   }
 
   if (!recipe) {
@@ -376,7 +370,13 @@ export default function RecipeDetail() {
                 disabled={favoriteLoading}
               >
                 {favoriteLoading ? (
-                  <ActivityIndicator size="small" color="#EF4444" />
+                  <View style={styles.favoriteLoadingContainer}>
+                    <MaterialIcons 
+                      name={isFavorite ? "favorite" : "favorite-border"} 
+                      size={20} 
+                      color="#EF4444" 
+                    />
+                  </View>
                 ) : (
                   <MaterialIcons 
                     name={isFavorite ? "favorite" : "favorite-border"} 
@@ -398,7 +398,9 @@ export default function RecipeDetail() {
                     disabled={deleting}
                   >
                     {deleting ? (
-                      <ActivityIndicator size="small" color="#EF4444" />
+                      <View style={styles.deleteLoadingContainer}>
+                        <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
+                      </View>
                     ) : (
                       <MaterialIcons name="delete-outline" size={20} color="#EF4444" />
                     )}
@@ -426,7 +428,7 @@ export default function RecipeDetail() {
             </View>
           </View>
 
-          {/*  Simple Cooking Timer */}
+          {/* Simple Cooking Timer */}
           <View style={styles.simpleTimerCard}>
             <View style={styles.timerHeader}>
               <MaterialIcons name="timer" size={22} color="#10B981" />
@@ -517,7 +519,7 @@ export default function RecipeDetail() {
                 <Text style={[styles.metaValue, { color: '#10B981' }]}>{recipe.cookingTime} min</Text>
               </View>
 
-              {/*  Rating Card */}
+              {/* Rating Card */}
               <View style={styles.metaCard}>
                 <View style={styles.metaIconContainer}>
                   <MaterialIcons name="star" size={22} color="#F59E0B" />
@@ -562,7 +564,7 @@ export default function RecipeDetail() {
             </View>
           </View>
 
-          {/* Steps Card  */}
+          {/* Steps Card */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <MaterialIcons name="list" size={20} color="#F97316" />
@@ -581,7 +583,7 @@ export default function RecipeDetail() {
             </View>
           </View>
 
-          {/*  Reviews Card */}
+          {/* Reviews Card */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <MaterialIcons name="reviews" size={20} color="#F97316" />
@@ -631,7 +633,10 @@ export default function RecipeDetail() {
 
             {/* Reviews List */}
             {reviewsLoading ? (
-              <ActivityIndicator size="small" color="#F97316" style={{ marginTop: 20 }} />
+              <View style={styles.reviewsLoadingContainer}>
+                <MaterialIcons name="star" size={24} color="#F97316" />
+                <Text style={styles.reviewsLoadingText}>Loading reviews...</Text>
+              </View>
             ) : reviews.length > 0 ? (
               <View style={styles.reviewsList}>
                 {reviews.slice(0, 3).map((review) => (
@@ -691,28 +696,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     paddingTop: 50,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-  },
-  loadingCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 40,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  loadingText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#6B7280',
   },
   errorCard: {
     flex: 1,
@@ -794,6 +777,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  favoriteLoadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteLoadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   titleSection: {
     marginBottom: 20,
   },
@@ -823,7 +814,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
   },
-  // 🟣 Timer Styles
+  // Timer Styles
   simpleTimerCard: {
     backgroundColor: '#F0FDF4',
     borderRadius: 16,
@@ -1053,7 +1044,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#374151',
   },
-  //  Review Styles
+  // Review Styles
   userReviewActions: {
     flexDirection: 'row',
     gap: 10,
@@ -1118,6 +1109,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 15,
     fontWeight: '600',
+  },
+  reviewsLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    gap: 10,
+  },
+  reviewsLoadingText: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   reviewsList: {
     gap: 14,

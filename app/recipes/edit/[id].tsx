@@ -8,13 +8,13 @@ import {
   Alert,
   ScrollView,
   Image,
-  ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { getRecipeById, updateRecipe } from '../../../services/recipeService';
 import { getCurrentUser } from '../../../services/authService';
 import { MaterialIcons } from '@expo/vector-icons';
+import RecipePreloader from '../../components/SplashScreen'; 
 
 export default function EditRecipe() {
   const { id } = useLocalSearchParams();
@@ -140,15 +140,9 @@ export default function EditRecipe() {
     }
   };
 
+  // Use the preloader when loading
   if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingCard}>
-          <ActivityIndicator size="large" color="#F97316" />
-          <Text style={styles.loadingText}>Loading recipe...</Text>
-        </View>
-      </View>
-    );
+    return <RecipePreloader />;
   }
 
   return (
@@ -346,7 +340,7 @@ export default function EditRecipe() {
             >
               {saving ? (
                 <View style={styles.buttonContent}>
-                  <ActivityIndicator size="small" color="white" />
+                  <MaterialIcons name="save" size={22} color="white" />
                   <Text style={styles.updateButtonText}>Saving...</Text>
                 </View>
               ) : (
@@ -378,25 +372,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     paddingTop: 50,
-  },
-  loadingCard: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 20,
-    padding: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  loadingText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#6B7280',
   },
   content: {
     paddingBottom: 40,
