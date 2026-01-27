@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,11 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -22,6 +27,23 @@ export default function ReviewModal({ visible, onClose, onSubmit, userReview }: 
   const [rating, setRating] = useState(userReview?.rating || 0);
   const [comment, setComment] = useState(userReview?.comment || '');
   const [submitting, setSubmitting] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -45,85 +67,113 @@ export default function ReviewModal({ visible, onClose, onSubmit, userReview }: 
     }
   };
 
+  const handleClose = () => {
+    Keyboard.dismiss();
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
       transparent={true}
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {userReview ? 'Edit Your Review' : 'Add a Review'}
-            </Text>
-            <Pressable onPress={onClose}>
-              <MaterialIcons name="close" size={24} color="#6B7280" />
-            </Pressable>
-          </View>
+      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+        >
+          <View style={styles.modalOverlay}>
+            {/* Close modal by tapping outside when keyboard is hidden */}
+            {!keyboardVisible && (
+              <Pressable style={styles.outsidePressable} onPress={handleClose} />
+            )}
+            
+            <View style={[
+              styles.modalContent,
+              keyboardVisible && styles.modalContentKeyboardVisible
+            ]}>
+              <ScrollView 
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    {userReview ? 'Edit Your Review' : 'Add a Review'}
+                  </Text>
+                  <Pressable onPress={handleClose} hitSlop={10}>
+                    <MaterialIcons name="close" size={24} color="#6B7280" />
+                  </Pressable>
+                </View>
 
-         
-          <View style={styles.ratingSection}>
-            <Text style={styles.ratingLabel}>Your Rating</Text>
-            <View style={styles.starsContainer}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Pressable
-                  key={star}
-                  onPress={() => setRating(star)}
-                  style={styles.starButton}
-                >
-                  <MaterialIcons
-                    name={star <= rating ? "star" : "star-border"}
-                    size={32}
-                    color="#F59E0B"
+                <View style={styles.ratingSection}>
+                  <Text style={styles.ratingLabel}>Your Rating</Text>
+                  <View style={styles.starsContainer}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Pressable
+                        key={star}
+                        onPress={() => setRating(star)}
+                        style={styles.starButton}
+                        hitSlop={10}
+                      >
+                        <MaterialIcons
+                          name={star <= rating ? "star" : "star-border"}
+                          size={32}
+                          color="#F59E0B"
+                        />
+                      </Pressable>
+                    ))}
+                  </View>
+                  <Text style={styles.ratingText}>{rating}.0 out of 5</Text>
+                </View>
+
+                <View style={styles.commentSection}>
+                  <Text style={styles.commentLabel}>Your Review</Text>
+                  <TextInput
+                    style={styles.commentInput}
+                    placeholder="Share your experience with this recipe..."
+                    value={comment}
+                    onChangeText={setComment}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                    placeholderTextColor="#9CA3AF"
+                    returnKeyType="done"
+                    blurOnSubmit={true}
+                    onSubmitEditing={() => Keyboard.dismiss()}
                   />
-                </Pressable>
-              ))}
+                </View>
+
+                <View style={styles.modalActions}>
+                  <Pressable 
+                    style={styles.cancelButton} 
+                    onPress={handleClose}
+                    disabled={submitting}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.submitButton, submitting && styles.buttonDisabled]}
+                    onPress={handleSubmit}
+                    disabled={submitting}
+                  >
+                    {submitting ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Text style={styles.submitButtonText}>
+                        {userReview ? 'Update Review' : 'Submit Review'}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              </ScrollView>
             </View>
-            <Text style={styles.ratingText}>{rating}.0 out of 5</Text>
           </View>
-
-          
-          <View style={styles.commentSection}>
-            <Text style={styles.commentLabel}>Your Review</Text>
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Share your experience with this recipe..."
-              value={comment}
-              onChangeText={setComment}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-
-          
-          <View style={styles.modalActions}>
-            <Pressable 
-              style={styles.cancelButton} 
-              onPress={onClose}
-              disabled={submitting}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </Pressable>
-            <Pressable 
-              style={[styles.submitButton, submitting && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {userReview ? 'Update Review' : 'Submit Review'}
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        </View>
-      </View>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -134,12 +184,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+  outsidePressable: {
+    flex: 1,
+  },
   modalContent: {
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
     maxHeight: '80%',
+  },
+  modalContentKeyboardVisible: {
+    maxHeight: '90%',
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   modalHeader: {
     flexDirection: 'row',
