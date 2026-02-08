@@ -1,212 +1,234 @@
 # 🍳 CookBook – Recipe Management Mobile Application
 
-> A modern, feature-rich mobile application to **discover, create, and manage recipes**, built with **React Native** and **Firebase**.
+> A modern cross-platform mobile app to **discover, create, and manage recipes** using **React Native (Expo) + Firebase**.
 
 ---
 
 ## 📱 Project Overview
 
-**CookBook** is a cross-platform mobile recipe management app designed to help users explore new dishes, manage their own recipes, and enhance their cooking experience.
-It offers a **beautiful UI**, **secure authentication**, and **powerful recipe discovery tools**.
+**CookBook** is a recipe management mobile application that allows users to explore recipes, create their own, upload images, rate dishes, and manage favorites.
+The app focuses on **clean UI**, **secure authentication**, **state management**, and **real-time data persistence** with Firebase.
+
+This project was developed for:
+
+> **ITS 2127 – Advanced Mobile Developer (Final Project)**
 
 ---
 
 ## ✨ Core Features
 
-### 🔐 1. User Authentication
+### 🔐 User Authentication (Firebase Auth)
 
-* Secure **Sign Up / Login** using Firebase Authentication
-* Persistent user sessions
-* Protected routes for authenticated users only
-
----
-
-### 🍽️ 2. Recipe Management (CRUD)
-
-* ➕ Create recipes with:
-
-  * Title, description, category
-  * Difficulty level
-  * Cooking time
-  * Ingredients & steps
-* 📖 View all recipes with detailed screens
-* ✏️ Edit existing recipes
-* 🗑️ Delete your own recipes
-* 🖼️ Upload recipe images from device gallery
+* Email/Password Sign Up & Login
+* Persistent login sessions
+* Protected routes for authenticated users
 
 ---
 
-### 🔍 3. Advanced Recipe Discovery
+### 🍽️ Recipe Management – Full CRUD
 
-* Search recipes by **title, description, or category**
-* Filter recipes by:
+Users can:
 
-  * ⏱️ Cooking time (Quick / Medium / Long)
-  * 🔥 Difficulty (Easy / Medium / Hard)
-* ❤️ Favorites system for quick access
-* 📂 Category-based organization (Breakfast, Dessert, Italian, etc.)
+* ➕ Create new recipes (title, category, time, difficulty, ingredients, steps, image)
+* 📖 View all recipes in a list & detailed screen
+* ✏️ Edit their own recipes
+* 🗑️ Delete their own recipes
+* 🖼️ Upload recipe images using **Cloudinary**
 
 ---
 
-### 👥 4. Social Features
+### 🔍 Recipe Discovery
+
+* Search by title, description, or category
+* Filter by cooking time and difficulty
+* Category-based organization
+* Favorites system ❤️
+
+---
+
+### 👥 Social Interaction
 
 * ⭐ Rate recipes (1–5 stars)
-* 💬 Add reviews and comments
-* 📊 View average ratings
-* 🌍 Read feedback from other users
+* 💬 Add reviews/comments
+* 📊 View average ratings from users
 
 ---
 
-### ⏲️ 5. Cooking Tools
+### ⏲️ Cooking Tools
 
-* Built-in **cooking timer** (Start, Pause, Resume, Reset)
+* Built-in cooking timer (Start / Pause / Resume / Reset)
 * Step-by-step cooking instructions
-* Organized ingredient lists
 
 ---
 
-## 🛠️ Technical Implementation
+## 🧠 Technical Implementation
 
-### 🧱 Architecture
-
-* **Frontend:** React Native + TypeScript
-* **Backend:** Firebase
-
-  * Authentication
-  * Firestore Database
-  * Firebase Storage
-* **Routing:** Expo Router (file-based navigation)
-* **State Management:** React Hooks & Context API
-* **Platform:** iOS & Android
+| Layer            | Technology                        |
+| ---------------- | --------------------------------- |
+| Frontend         | React Native + TypeScript         |
+| Navigation       | Expo Router (Stack Navigation)    |
+| State Management | React Context API + Hooks         |
+| Backend (BaaS)   | Firebase (Auth, Firestore)        |
+| Image Upload     | Expo ImagePicker + **Cloudinary** |
+| Lists            | Optimized with FlatList           |
 
 ---
 
-### 🔧 Key Technical Components
-
-* **Authentication Service:** User signup, login, logout & session handling
-* **Recipe Service:** CRUD operations, favorites & reviews
-* **Firebase Integration:** Real-time database sync
-* **Image Handling:** Upload & store images using Firebase Storage
-* **Form Validation:** Real-time validation with user feedback
-
----
-
-## 🧩 Code Structure
-
-* ♻️ Modular reusable components (Preloader, ReviewModal, etc.)
-* 🧠 Service layer separated from UI logic
-* 🧾 TypeScript interfaces for all data models
-* 🚨 Centralized error handling with friendly messages
-
----
-
-## 🎨 User Experience (UX)
-
-### Visual Design
-
-* 🎨 Consistent **Orange Theme** (`#F97316`)
-* 📦 Card-based recipe layout
-* 👆 Interactive buttons with feedback
-* ⏳ Smooth loading states
-
-### Navigation
-
-* Easy and intuitive screen flow
-* Clear back navigation
-* Modal interfaces for filters & reviews
-
-### Performance
-
-* ⚡ Optimized lists using `FlatList`
-* 🖼️ Lazy-loaded images
-* 🔁 Reduced unnecessary re-renders
-
----
-
-## 🔐 Security Implementation
-
-* Firebase Email/Password authentication
-* Users can **only edit/delete their own recipes**
-* Protected database operations
-* Input validation & sanitization
-
----
-
-## 🗄️ Database Structure
+## 🗄️ Firestore Database Structure
 
 ```
-Firestore Collections:
-- recipes   → All recipe data
-- favorites → User-specific favorites
-- reviews   → Ratings & comments
-- users     → User profile information
+Collections:
+- recipes
+- users
+- favorites
+- reviews
 ```
 
 ---
 
-## ✅ Testing & Validation
+## 🎨 UI / UX Highlights
 
-* Form-level validation for all inputs
-* Graceful error handling
-* Clear success & error messages
-* Prevents invalid data submission
-
----
-
-## 📱 Platform Compatibility
-
-* ✅ iOS (iPhone optimized)
-* ✅ Android support
-* 📐 Responsive for all screen sizes
-* ⌨️ Proper keyboard handling
+* Consistent Orange theme (#F97316)
+* Card-based modern layout
+* Smooth navigation & loading states
+* Responsive across Android & iOS
+* Proper keyboard handling
 
 ---
 
-## 📋 Requirements & Implementation Status
+## 🔐 Security
 
-### Mandatory Requirements
-
-✅ Firebase Authentication
-✅ Full CRUD Operations
-✅ Multi-screen Navigation
-✅ State Management
-✅ Firestore & Storage Integration
-
-### Advanced Features
-
-✅ Image Upload
-✅ Search & Filter
-✅ Favorites System
-✅ Reviews & Ratings
-✅ Cooking Timer
-✅ Professional Responsive UI
+* Only authenticated users can access app features
+* Users can edit/delete **only their own** recipes
+* Input validation and error handling
 
 ---
 
-## 🧰 Technologies Used
+## 📁 Project Structure
 
-* **React Native**
-* **TypeScript**
-* **Expo**
-* **Firebase (Auth, Firestore, Storage)**
-* **Expo ImagePicker**
-* **Material Icons**
+```
+/app            → Screens (Expo Router)
+/components     → Reusable UI components
+/services       → Firebase & business logic (includes Types)
+firebase.ts     → Firebase configuration
+```
+
+*Note: TypeScript interfaces are defined in `RecipeService.ts`*
 
 ---
 
-## 📊 Project Scope
+## 🚀 Setup & Run Instructions (Important for Evaluation)
 
-* 🖥️ Screens: 8+ main screens
-* 🧩 Components: 3+ reusable components
-* 🔧 Services: Authentication & Recipe services
-* 🚀 Features: 10+ advanced features
+### 1️⃣ Clone Repository
+
+```bash
+git clone https://github.com/NandikaKW/Food-Recipe-Management-Application.git
+cd Food-Recipe-Management-Application
+```
+
+### 2️⃣ Install Dependencies
+
+```bash
+npm install
+```
+
+### 3️⃣ Firebase Configuration
+
+Create a Firebase project and enable:
+
+* Firebase Authentication (Email/Password)
+* Firestore Database
+
+Create file:
+
+```
+firebase.ts
+```
+
+Add your Firebase keys:
+
+```ts
+import { initializeApp } from 'firebase/app';
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+export const app = initializeApp(firebaseConfig);
+```
+
+### 4️⃣ Cloudinary Configuration
+
+* Create a Cloudinary account
+* Add your cloud name, API key & secret to `.env` file (or config)
+* Used for storing recipe images
+
+---
+
+### 5️⃣ Run the App
+
+```bash
+npx expo start
+```
+
+Scan QR using **Expo Go** or run on emulator.
+
+---
+
+## 📦 Build APK (Android)
+
+APK available via:
+
+[Download APK](https://expo.dev/artifacts/eas/aUNwxggYNVrcQN6no8fddi.apk)
+
+Or build using Expo EAS:
+
+```bash
+eas build -p android
+```
+
+---
+
+## 🧪 Validation & Testing
+
+* Form validation for all inputs
+* Error & success messages
+* Smooth list rendering
+* Proper loading states
+
+---
+
+## ✅ Assignment Requirement Checklist
+
+| Requirement      | Implemented        |
+| ---------------- | ------------------ |
+| Authentication   | ✅ Firebase Auth    |
+| CRUD Operations  | ✅ Recipes          |
+| Navigation       | ✅ Stack Navigation |
+| State Management | ✅ Context API      |
+| Data Persistence | ✅ Firestore        |
+| Image Upload     | ✅ Cloudinary       |
+| Android Build    | ✅ APK Provided     |
+| Demo Video       | ✅ YouTube Link     |
+| Git Commits      | ✅ Proper History   |
+| README           | ✅ Complete         |
+
+---
+
+## 🔗 Important Links
+
+* **GitHub Repository:** [https://github.com/NandikaKW/Food-Recipe-Management-Application](https://github.com/NandikaKW/Food-Recipe-Management-Application)
+* **APK Download:** [https://expo.dev/artifacts/eas/aUNwxggYNVrcQN6no8fddi.apk](https://expo.dev/artifacts/eas/aUNwxggYNVrcQN6no8fddi.apk)
 
 ---
 
 ## 👨‍💻 Author
 
 **Nandika Kaweesha Fernando**
-📍 Sri Lanka
-🚀 MERN & MEAN Stack Developer | Mobile App Developer
-
-
+Sri Lanka 🇱🇰
+MERN & MEAN Stack Developer | Mobile App Developer
