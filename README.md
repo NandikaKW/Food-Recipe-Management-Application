@@ -14,6 +14,11 @@ This project was developed for:
 > **ITS 2127 – Advanced Mobile Developer (Final Project)**
 
 ---
+🎯 Project Objective
+
+The objective of this project is to design and develop a cross-platform mobile application using React Native Expo with proper authentication, state management, navigation, and real-time database integration while following clean architecture and reusable component design principles.
+
+---
 
 ## ✨ Core Features
 
@@ -214,7 +219,6 @@ eas build -p android
 | Data Persistence | ✅ Firestore        |
 | Image Upload     | ✅ Cloudinary       |
 | Android Build    | ✅ APK Provided     |
-| Demo Video       | ✅ YouTube Link     |
 | Git Commits      | ✅ Proper History   |
 | README           | ✅ Complete         |
 
